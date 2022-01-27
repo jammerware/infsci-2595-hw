@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 02"
 subtitle: "Assigned January 19, 2022; Due: January 26, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: January 26, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaobrators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.
 
 ## Overview
 
@@ -43,9 +43,7 @@ The code chunk below reads in a data set for you. The code chunk below that disp
 
 ```{r, read_in_prob_01_data}
 high_noise_github_file <- "https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/02/prob_high_noise_dataset.csv"
-
-prob_high_noise <- readr::read_csv(high_noise_github_file, 
-                                   col_names = TRUE)
+prob_high_noise <- readr::read_csv(high_noise_github_file, col_names = TRUE)
 ```
 
 ```{r, glimpse_prob_01_data}
@@ -61,10 +59,14 @@ prob_high_noise %>% glimpse()
 #### SOLUTION
 
 ```{r, solution_01a}
-### your code here
+prob_high_noise %>%
+  ggplot(mapping = aes(x = x, y = y)) + 
+  geom_point()
 ```
 
 Is the relationship linear or non-linear?  
+
+The relationship between `x` and `y` appears non-linear.
 
 ### 1b)
 
@@ -87,10 +89,15 @@ The resampling scheme is specified by the `trainControl()` function in `caret`. 
 #### SOLUTION
 
 ```{r, solution_01c}
-my_ctrl <- trainControl(method = "cv", number = 5)
+my_ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5
+)
 ```
 
-How many times will an individual model be trained and tested?  
+How many times will an individual model be trained and tested?
+
+If I understand the `trainControl` method correctly, the model will be trained and tested 5 times, each time with a different fifth of the data held out for testing (5-fold cross validation).
 
 ### 1d)
 
@@ -101,10 +108,12 @@ The response is a continuous variable.
 *NOTE*: Not all of the listed performance metrics above are relevant to regression problems!  
 
 ```{r, solution_011d}
-my_metric <- 'RMSE'
+my_metric <- "RMSE"
 ```
 
-Why did you make your choice?  
+Why did you make your choice?
+
+Accuracy, kappa, and ROC are not appropriate to a continuous regression problem (since they would require thresholding to use). This leaves us with r-squared, MAE, and RMSE. Without more context, I'm not sure there's a clear best choice, but I chose RMSE under the assumption that we don't need to interpret the error in terms of the original units.
 
 ### 1e)
 
@@ -126,63 +135,102 @@ mod_high_1 <- train(
   data = prob_high_noise,
   method = "lm",
   metric = my_metric,
-  trControl = my_ctrl
-)
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_b, eval=FALSE}
+```{r, solution_01e_b}
 ### quadratic relationship
 set.seed(2001)
-mod_high_2 <- train()
+mod_high_2 <- train(
+  y ~ x + I(x^2),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_c, eval=FALSE}
+```{r, solution_01e_c}
 ### cubic relationship
 set.seed(2001)
-mod_high_3 <- train()
+mod_high_3 <- train(
+  y ~ x + I(x^2) + I(x^3),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_d, eval=FALSE}
+```{r, solution_01e_d}
 ### 4th order
 set.seed(2001)
-mod_high_4 <- train()
+mod_high_4 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_e, eval=FALSE}
+```{r, solution_01e_e}
 ### 5th order
 set.seed(2001)
-mod_high_5 <- train()
+mod_high_5 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_f, eval=FALSE}
+```{r, solution_01e_f}
 ### 6th order
 set.seed(2001)
-mod_high_6 <- train()
+mod_high_6 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_g, eval=FALSE}
+```{r, solution_01e_g}
 ### 7th order
 set.seed(2001)
-mod_high_7 <- train()
+mod_high_7 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6) + I(x^7),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_h, eval=FALSE}
+```{r, solution_01e_h}
 ### 8th order
 set.seed(2001)
-mod_high_8 <- train()
+mod_high_8 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6) + I(x^7) + I(x^8),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
-```{r, solution_01e_i, eval=FALSE}
+```{r, solution_01e_i}
 ### 9th order
 set.seed(2001)
-mod_high_9 <- train()
+mod_high_9 <- train(
+  y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5) + I(x^6) + I(x^7) + I(x^8) + I(x^9),
+  data = prob_high_noise,
+  method = "lm",
+  metric = my_metric,
+  trControl = my_ctrl)
 ```
 
 ### 1f)
 
 The code chunk below compiles all of the model training results for you. The `high_noise_results` object can be used to compare the models through tables and visualizations.  
 
-```{r, assemble_resampling_high, eval=FALSE}
+```{r, assemble_resampling_high}
 high_noise_results = resamples(list(fit_01 = mod_high_1,
                                     fit_02 = mod_high_2,
                                     fit_03 = mod_high_3,
@@ -203,14 +251,16 @@ high_noise_results = resamples(list(fit_01 = mod_high_1,
 #### SOLUTION
 
 ```{r, solution_01f_a}
-### dotplot for your specified primary performance metric
+dotplot(high_noise_results, prob_high_noise, metric='RMSE')
 ```
 
 ```{r, solution_01f_b}
-### dotplot for another performance metric
+dotplot(high_noise_results, prob_high_noise, metric='MAE')
 ```
 
 Is there a best model?  
+
+Among the models I tested, the fourth, fifth, and sixth-order polynomials have strongest performance, and all seem pretty close to one another by RMSE and MAE. They have the lowest average value and relatively low variability for both metrics. Under the assumption that lower-order models are better if they're within one SE of each other, I'd choose the 4th-order model.
 
 ### 1g)
 
@@ -223,10 +273,12 @@ The variable `mod_high_2` is a `caret` model object. However, you able to access
 #### SOLUTION
 
 ```{r, solution_01g}
-### your code here
+coefplot::multiplot(mod_high_4$finalModel, mod_high_5$finalModel, mod_high_6$finalModel)
 ```
 
-Does anything stand out?  
+Does anything stand out?
+
+In general, it seems that the higher-order coefficients are either barely significant or not significant at all, suggesting that a lower-order model may be better.
 
 ## Problem 02
 
@@ -236,7 +288,6 @@ The low noise level data are loaded in the code chunk below. The glimpse shows t
 
 ```{r, read_in_prob_02_data}
 low_noise_github_file <- "https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/02/prob_low_noise_dataset.csv"
-
 prob_low_noise <- readr::read_csv(low_noise_github_file, col_names = TRUE)
 ```
 
@@ -256,15 +307,15 @@ prob_low_noise %>%
   geom_point() 
 ```
 
-How does it compare?  
+How does it compare?
 
-The data are more tightly clustered around a central line, suggesting lower noise.
+The relationship between x and y appears significantly less "noisy" than the data in problem 1 - the points are clustered more closely.
 
 ### 2b)
 
 You will use the same resampling scheme and primary performance metric that you used in Problem 01 to train 9 different polynomial models. This time however you will use the low noise level data.  
 
-**Train the 9 different polynomial models using the required formula interface, `method`, `trControl`, and `metric` arguments that you used in Problem 01. However, pay close attention and set the `data` argument to be `prob_low_noise`.**  
+**Train the 9 different polynomail models using the required formula interface, `method`, `trControl`, and `metric` arguments that you used in Problem 01. However, pay close attention and set the `data` argument to be `prob_low_noise`.**  
 
 **The variable names and comments specify which polynomial to use.**  
 
@@ -384,7 +435,7 @@ mod_low_9 <- train(
 
 The code chunk below compiles all of the resampling results together for the models associated with the low noise level data.  
 
-```{r, assemble_resampling_low, eval=FALSE}
+```{r, assemble_resampling_low}
 low_noise_results = resamples(list(fit_01 = mod_low_1,
                                    fit_02 = mod_low_2,
                                    fit_03 = mod_low_3,
@@ -407,12 +458,16 @@ dotplot(low_noise_results, metric = "RMSE")
 ```
 
 ```{r, solution_02c_b}
-dotplot(low_noise_results, metric = 'Rsquared')
+dotplot(low_noise_results, metric = 'MAE')
 ```
 
-Is there a best model? Are the results different from the high level noise results?  
+Is there a best model? Are the results different from the high level noise results?
 
-It seems relatively clear that the 5th-order polynomial is the best model, having lowest average RMSE and highest (nearly perfect!) correlation by Pearson's R. Both metrics have very low variability, suggesting a highly biased model.
+The 5th-order polynomial seems like the best model, minimizing the value of and variability in both RMSE and MAE. The 6th-order model scores well in both metrics, but I'm arguing for the 5th-order one on the principle that the simpler model will generalize better if it's within one standard error of the more complex one.
+
+The 4th-order model we identified in problem 1 performs much worse on the more noisy dataset.
+
+Additionally, lower-order polynomials performed much worse on the less-noisy dataset.
 
 ### 2d)
 
@@ -424,13 +479,14 @@ You have now trained and assessed simple to complex models under low and high no
 
 **What are your thoughts?**  
 
+In problem 1, the results suggested that a lower-order polynomial was the best model. We saw that the 4th-order model performed the best but that its lowest-order coefficients were the most significant. In problem 2, the same model performed much worse as a result of the noise, and the 5th-order model, which performed decently in the first problem, outperformed the 4th-order model in the second. My intuition would be that higher-order models perform better in the presence of noise.
+
 ## Problem 03
 
 The code chunk below reads in a data set that you will work with in Problems 3, 4 and 5. A glimpse is printed for you which shows three variables, an input `x`, a model predicted event probability, `pred_prob`, and the observed output class, `obs_class`. You will work with this data set for the remainder of the assignment to get experience with binary classification performance metrics.  
 
 ```{r, read_binary_class_data}
 binary_class_data_url <- "https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/02/hw02_binary_class.csv"
-
 model_pred_df <- readr::read_csv(binary_class_data_url, col_names = TRUE)
 ```
 
@@ -445,7 +501,7 @@ model_pred_df %>% glimpse()
 #### SOLUTION
 
 ```{r, solution_03a}
-model_pred_df$obs_class %>% n_distinct()
+model_pred_df %>% count(obs_class)
 ```
 
 ### 3b)
@@ -456,13 +512,19 @@ You should see that one of the values of `obs_class` is the event of interest an
 
 #### SOLUTION
 
+I couldn't figure out how the `mean()` function would apply here. Is this referring to the base `mean()` function in R (e.g. the arithmetic mean)? I just calculated the proportion
+of events and non-events.
+
 ```{r, solution_03b}
-model_pred_df$pred_prob %>% mean
+event_count <- model_pred_df %>% 
+  filter(obs_class == "event") %>%
+  count
+event_count / nrow(model_pred_df)
 ```
 
-Is the data set balanced?
+Is the data set balanced?  
 
-The data set is roughly balanced, with roughly 45% of cases representing the `non-event` class.
+The data set is roughly balanced, with 52.8% of cases representing the `event` class.
 
 ### 3c)
 
@@ -493,9 +555,11 @@ You will use the `ifelse()` function combined with `mutate()` to add a column to
 
 #### SOLUTION
 
-```{r, solution_03c, eval=FALSE}
+```{r, solution_03c}
 model_pred_df <- model_pred_df %>%
-  mutate(y = ifelse(obs_class == 1, 1, 0))
+  mutate(y = ifelse(obs_class == "event", 1, 0))
+
+model_pred_df %>% glimpse()
 ```
 
 ### 3d)
@@ -507,7 +571,9 @@ You will now visualize the observed binary outcome as encoded by 0 and 1.
 #### SOLUTION
 
 ```{r, solution_03d}
-### your code here
+model_pred_df %>%
+  ggplot() +
+  geom_point(mapping = aes(x = x, y = y), size = 3.5, alpha = 0.5)
 ```
 
 ### 3e)
@@ -519,19 +585,22 @@ The `model_pred_df` includes a column (variable) for a model predicted event pro
 #### SOLUTION
 
 ```{r, solution_03e}
-### your code here
+model_pred_df$pred_prob %>% summary
 ```
 
 ### 3f)
 
 With the binary outcome encoded as 0/1 with the `y` variable we can overlay the model predicted probability on top of the observed binary response.  
 
-**Use a `geom_line()` to plot the predicted event probability, `pred_prob`, with respect to the input `x`. Set the line `color` to be `"red"` within the `geom_line()` call. Overlay the binary response with the encoded resonse `y` as a scatter plot with `geom_point()`. Use the same marker size and transparency that you used for Problem 3d).**  
+**Use a `geom_line()` to plot the predicted event probability, `pred_prob`, with respect to the input `x`. Set the line `color` to be `"red"` within the `geom_line()` call. Overlay the binary response with the encoded response `y` as a scatter plot with `geom_point()`. Use the same marker size and transparency that you used for Problem 3d).**  
 
 #### SOLUTION
 
 ```{r, solution_03f}
-### your code here
+model_pred_df %>%
+  ggplot() +
+  geom_point(mapping = aes(x = x, y = y), size = 3.5, alpha = 0.5) + 
+  geom_line(mapping = aes(x = x, y = pred_prob), color = "red")
 ```
 
 
@@ -542,6 +611,8 @@ With the binary outcome encoded as 0/1 with the `y` variable we can overlay the 
 #### SOLUTION
 
 What do you think?  
+
+Yes, it seems to. In the outcome variable, most of the non-events are clustered around values of x between -1 and 1, and the lowest probability values also appear in this region.
 
 ## Problem 04
 
@@ -555,8 +626,11 @@ In order to classify our predictions we must compare the predicted probability a
 
 #### SOLUTION
 
-```{r, solution_04a, eval=FALSE}
-model_class_0.5 <- 
+```{r, solution_04a}
+model_class_0.5 <- model_pred_df %>%
+  mutate(pred_class = ifelse(pred_prob >= 0.5, "event", "non_event"))
+
+model_class_0.5 %>% glimpse 
 ```
 
 ### 4b)
@@ -567,9 +641,17 @@ You should now have a tibble that has a model classification and the observed bi
 
 #### SOLUTION
 
+I ended up making Accuracy a function since we also need it in problem 5
+
 ```{r, solution_4b}
-### your code here
+get_accuracy <- function(data) {
+  total_count <- nrow(data)
+  nrow(data %>% filter(obs_class == pred_class)) / total_count
+}
+
+get_accuracy(model_class_0.5)
 ```
+This means our model predicts the correct outcome in 70.4% of cases.
 
 ### 4c)
 
@@ -582,10 +664,10 @@ We discussed in lecture how there are additional metrics we can consider with bi
 #### SOLUTION
 
 ```{r, solution_04c}
-### your code here
+model_class_0.5 %>% count(pred_class, obs_class)
 ```
 
-your response here.  
+There are 6 false positives and 53 true negatives.
 
 ### 4d)
 
@@ -593,9 +675,43 @@ your response here.
 
 #### SOLUTION
 
+I wrote some functions to extract confusion matrix entries and calculate sensitivity/FPR for this and later problems:
+
 ```{r, solution_04d}
-### add more code chunks if you need to
+get_confusion_count <- function(., pred, obs) {
+  (.) %>%
+    filter(pred_class == pred, obs_class == obs) %>%
+    slice_head() %>%
+    pull(n)
+}
+
+get_sensitivity <- function(data) {
+  confusion <- data %>% count(pred_class, obs_class)
+  tp = get_confusion_count(confusion, 'event', 'event')
+  fn = get_confusion_count(confusion, 'non_event', 'event')
+  tp / (tp + fn)
+}
+
+get_fpr <- function(data) {
+  confusion <- data %>% count(pred_class, obs_class)
+  fp = get_confusion_count(confusion, 'event', 'non_event')
+  tn = get_confusion_count(confusion, 'non_event', 'non_event')
+  fp / (fp + tn)
+}
 ```
+
+##### Sensitivity (TPR)
+
+```{r}
+get_sensitivity(model_class_0.5)
+```
+
+##### FPR
+
+```{r}
+get_fpr(model_class_0.5)
+```
+
 
 ### 4e)
 
@@ -607,8 +723,11 @@ The first action you must perform is to make classifications based on a differen
 
 #### SOLUTION
 
-```{r, solution_04e, eval=FALSE}
-model_class_0.7 <- 
+```{r, solution_04e}
+model_class_0.7 <- model_pred_df %>%
+  mutate(pred_class = ifelse(pred_prob >= 0.7, "event", "non_event"))
+
+model_class_0.7 %>% glimpse 
 ```
 
 ### 4f)
@@ -617,13 +736,16 @@ model_class_0.7 <-
 
 #### SOLUTION
 
-```{r, solution_04f, eval=FALSE}
-model_class_0.3 <- 
+```{r, solution_04f}
+model_class_0.3 <-  model_pred_df %>%
+  mutate(pred_class = ifelse(pred_prob >= 0.3, "event", "non_event"))
+
+model_class_0.3 %>% glimpse 
 ```
 
 ## Problem 5
 
-You will continue with the binary classification application in this problem.  
+You will continue with the binary classification application in this problem.
 
 ### 5a)
 
@@ -631,8 +753,10 @@ You will continue with the binary classification application in this problem.
 
 #### SOLUTION
 
+Note that this code calls a function I wrote in my solution to **4b**.
+
 ```{r, solution_05a}
-### your code here
+get_accuracy(model_class_0.7)
 ```
 
 ### 5b)
@@ -641,8 +765,26 @@ You will continue with the binary classification application in this problem.
 
 #### SOLUTION
 
+A quick function to deal with specificity:
+
 ```{r, solution_05b}
-### add more code chunks if you need to
+get_specificity <- function(data) {
+  confusion <- data %>% count(pred_class, obs_class)
+  tn = get_confusion_count(confusion, 'non_event', 'non_event')
+  fp = get_confusion_count(confusion, 'event', 'non_event')
+  tn / (tn + fp)
+}
+```
+
+##### Sensitivity
+
+```{r}
+get_sensitivity(model_class_0.7)
+```
+
+##### Specificity
+```{r}
+get_specificity(model_class_0.7)
 ```
 
 ### 5c)
@@ -652,7 +794,7 @@ You will continue with the binary classification application in this problem.
 #### SOLUTION
 
 ```{r, solution_05c}
-### your code here
+get_accuracy(model_class_0.3)
 ```
 
 ### 5d)
@@ -661,8 +803,14 @@ You will continue with the binary classification application in this problem.
 
 #### SOLUTION
 
-```{r, solution_05d}
-### add more code chunks if you need to
+##### Sensitivity
+```{r}
+get_sensitivity(model_class_0.3)
+```
+
+##### Specificity
+```{r}
+get_specificity(model_class_0.3)
 ```
 
 ### 5e)
@@ -673,6 +821,32 @@ You have calculated the Sensitivity and FPR at three different threshold values.
 
 #### SOLUTION
 
+Compiling the data:
+
 ```{r, solution_05e}
-### you may add more code chunks if you need to
+df_roc = tibble(
+  threshold = c(0.3, 0.5, 0.7),
+  sensitivity = c(
+    get_sensitivity(model_class_0.3),
+    get_sensitivity(model_class_0.5),
+    get_sensitivity(model_class_0.7)
+  ),
+  fpr = c(
+    get_fpr(model_class_0.3),
+    get_fpr(model_class_0.5),
+    get_fpr(model_class_0.7)
+  )
+)
+
+df_roc %>% glimpse
+```
+
+Now we plot:
+
+```{r}
+df_roc %>%
+  ggplot() + 
+  coord_equal(xlim=c(0,1), ylim=c(0,1)) +
+  geom_abline(slope = 1, intercept = 0) +
+  geom_point(mapping = aes(x = fpr, y=sensitivity, color = factor(threshold))) 
 ```
