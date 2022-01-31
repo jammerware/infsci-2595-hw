@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 03"
 subtitle: "Assigned January 26, 2022; Due: February 2, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: February 2, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -52,7 +52,13 @@ df %>% glimpse()
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary.  
+```{r}
+counts <- df %>% count(y)
+counts %>%
+  mutate(pct = n / sum(n))
+```
+
+The dataset is roughly balanced, with a difference in observation classes under 3%.
 
 ### 1b)
 
@@ -64,7 +70,10 @@ Download and install `yardstick` if you have not done so already.
 
 #### SOLUTION
 
-Add the code chunks here.  
+```{r}
+library(caret)
+library(yardstick)
+```
 
 ### 1c)
 
@@ -75,10 +84,9 @@ The resampling scheme is controlled by the `trainControl()` function, just as it
 
 **Specify the resampling scheme you wish to use and assign the result to the `ctrl_acc` object. Specify the primary performance metric to be Accuracy by assigning `'Accuracy'` to the `metric_acc` argument.**  
 
-```{r, solution_01c, eval=FALSE}
-ctrl_acc <- 
-
-metric_acc <- 
+```{r, solution_01c}
+ctrl_acc <- trainControl(method = "repeatedcv", number = 10, repeats = 2)
+metric_acc <- "Accuracy" 
 ```
 
 
@@ -105,58 +113,106 @@ Model 1 is the conventional "linear method" for binary classification. All other
 
 #### SOLUTION
 
-```{r, solution_01d_01, eval=FALSE}
+```{r, solution_01d_01}
 ### model 1
 set.seed(2021)
-mod_1_acc <- train()
+mod_1_acc <- train(
+  y ~ x1 + x2 + x3 + x4,
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_02, eval=FALSE}
+```{r, solution_01d_02}
 ### model 2
 set.seed(2021)
-mod_2_acc <- train()
+mod_2_acc <- train(
+  y ~ x1 + x2 + x3 + x4 + I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
-```{r, solution_01d_03, eval=FALSE}
+```{r, solution_01d_03}
 ### model 3
 set.seed(2021)
-mod_3_acc <- train()
+mod_3_acc <- train(
+  y ~ x1 + x2 + I(x1^2) + I(x2^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_04, eval=FALSE}
+```{r, solution_01d_04}
 ### model 4
 set.seed(2021)
-mod_4_acc <- train()
+mod_4_acc <- train(
+  y ~ x1 + x3 + I(x1^2) + I(x3^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_05, eval=FALSE}
+```{r, solution_01d_05}
 ### model 5
 set.seed(2021)
-mod_5_acc <- train()
+mod_5_acc <- train(
+  y ~ x1 + x4 + I(x1^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_06, eval=FALSE}
+```{r, solution_01d_06}
 ### model 6
 set.seed(2021)
-mod_6_acc <- train()
+mod_6_acc <- train(
+  y ~ x2 + x3 + I(x2^2) + I(x3^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_07, eval=FALSE}
+```{r, solution_01d_07}
 ### model 7
 set.seed(2021)
-mod_7_acc <- train()
+mod_7_acc <- train(
+  y ~ x2 + x4 + I(x2^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
-```{r, solution_01d_08, eval=FALSE}
+```{r, solution_01d_08}
 ### model 8
 set.seed(2021)
-mod_8_acc <- train()
+mod_8_acc <- train(
+  y ~ x3 + x4 + I(x3^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_acc,
+  trControl = ctrl_acc
+)
 ```
 
 
@@ -174,33 +230,35 @@ You will now compile all resample results together and compare the models based 
 
 #### SOLUTION
 
-```{r, solution_01e_01, eval=FALSE}
-acc_results <- resamples(list(mod_1 = ,
-                              mod_2 = ,
-                              mod_3 = ,
-                              mod_4 = ,
-                              mod_5 = ,
-                              mod_6 = ,
-                              mod_7 = ,
-                              mod_8 = ))
+```{r, solution_01e_01}
+acc_results <- resamples(list(mod_1 = mod_1_acc,
+                              mod_2 = mod_2_acc,
+                              mod_3 = mod_3_acc,
+                              mod_4 = mod_4_acc,
+                              mod_5 = mod_5_acc,
+                              mod_6 = mod_6_acc,
+                              mod_7 = mod_7_acc,
+                              mod_8 = mod_8_acc))
 ```
 
 
 Summarize the results across the resamples.  
 
 ```{r, solution_01e_02}
-### add your code here
+acc_results %>% summary(metric = metric_acc)
 ```
 
 
 Visualize the resample averaged Accuracy per model.  
 
 ```{r, solution_01e_03}
-### add your code here
+dotplot(acc_results, df, metric = metric_acc)
 ```
 
 
-Which model is the best?  
+Which model is the best? 
+
+Based solely on accuracy, the third model appears the best. Combined with the balanced nature of the dataset, this may suggest a good model. However, if accuracy were the whole story, the assignment would end here, and it doesn't, so on we go.
 
 ### 1f)
 
@@ -210,7 +268,30 @@ Next, you will consider how a model was correct and how a model was wrong via th
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary.  
+#### worst model by accuracy (8)
+
+```{r}
+confusionMatrix(mod_8_acc)
+```
+
+#### Second-worst model by accuracy (5)
+```{r}
+confusionMatrix(mod_5_acc)
+```
+
+#### Second-best model by accuracy (2)
+
+```{r}
+confusionMatrix(mod_2_acc)
+```
+
+#### Best model by accuracy (3)
+
+```{r}
+confusionMatrix(mod_3_acc)
+```
+
+In general, it seems like false negatives and false positives decrease as the models get better (by accuracy). This makes sense, as accuracy is defined as the ratio of true positives/negatives to total observations, so we'd expect higher accuracy models to have fewer false predictions.
 
 ## Problem 02
 
@@ -225,12 +306,15 @@ You will ultimately visually compare the ROC curves for the different models. Un
 #### SOLUTION
 
 ```{r, solution_02a, eval=FALSE}
-ctrl_roc <- trainControl( ,
-                         summaryFunction = twoClassSummary,
-                         classProbs = TRUE,
-                         savePredictions = TRUE)
+ctrl_roc <- trainControl( 
+  method = "repeatedcv",
+  number = 10,
+  repeats = 2,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE,
+  savePredictions = TRUE)
 
-metric_roc <- 
+metric_roc <- "ROC"
 ```
 
 ### 2b)
@@ -242,58 +326,106 @@ You will retrain the same set of 8 models that you trained in Problem 1d), but t
 #### SOLUTION
 
 
-```{r, solution_02b_01, eval=FALSE}
+```{r, solution_02b_01}
 ### model 1
 set.seed(2021)
-mod_1_roc <- train()
+mod_1_roc <- train(
+  y ~ x1 + x2 + x3 + x4,
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_02, eval=FALSE}
+```{r, solution_02b_02}
 ### model 2
 set.seed(2021)
-mod_2_roc <- train()
+mod_2_roc <- train(
+  y ~ x1 + x2 + x3 + x4 + I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
-```{r, solution_02b_03, eval=FALSE}
+```{r, solution_02b_03}
 ### model 3
 set.seed(2021)
-mod_3_roc <- train()
+mod_3_roc <- train(
+  y ~ x1 + x2 + I(x1^2) + I(x2^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_04, eval=FALSE}
+```{r, solution_02b_04}
 ### model 4
 set.seed(2021)
-mod_4_roc <- train()
+mod_4_roc <- train(
+  y ~ x1 + x3 + I(x1^2) + I(x3^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_05, eval=FALSE}
+```{r, solution_02b_05}
 ### model 5
 set.seed(2021)
-mod_5_roc <- train()
+mod_5_roc <- train(
+  y ~ x1 + x4 + I(x1^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_06, eval=FALSE}
+```{r, solution_02b_06}
 ### model 6
 set.seed(2021)
-mod_6_roc <- train()
+mod_6_roc <- train(
+  y ~ x2 + x3 + I(x2^2) + I(x3^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_07, eval=FALSE}
+```{r, solution_02b_07}
 ### model 7
 set.seed(2021)
-mod_7_roc <- train()
+mod_7_roc <- train(
+  y ~ x2 + x4 + I(x2^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
-```{r, solution_02b_08, eval=FALSE}
+```{r, solution_02b_08}
 ### model 8
 set.seed(2021)
-mod_8_roc <- train()
+mod_8_roc <- train(
+  y ~ x3 + x4 + I(x3^2) + I(x4^2),
+  method = "glm",
+  data = df,
+  metric = metric_roc,
+  trControl = ctrl_roc
+)
 ```
 
 
@@ -312,32 +444,34 @@ You will now compile all resample results together and compare the models based 
 #### SOLUTION
 
 ```{r, solution_02c_01, eval=FALSE}
-roc_results <- resamples(list(mod_1 = ,
-                              mod_2 = ,
-                              mod_3 = ,
-                              mod_4 = ,
-                              mod_5 = ,
-                              mod_6 = ,
-                              mod_7 = ,
-                              mod_8 = ))
+roc_results <- resamples(list(mod_1 = mod_1_roc,
+                              mod_2 = mod_2_roc,
+                              mod_3 = mod_3_roc,
+                              mod_4 = mod_4_roc,
+                              mod_5 = mod_5_roc,
+                              mod_6 = mod_6_roc,
+                              mod_7 = mod_7_roc,
+                              mod_8 = mod_8_roc))
 ```
 
 
 Summarize the results across the resamples.  
 
 ```{r, solution_02c_02}
-### add your code here
+roc_results %>% summary(metric = metric_roc)
 ```
 
 
 Visualize the resample averaged ROC AUC per model.  
 
 ```{r, solution_02c_03}
-### add your code here
+roc_results %>% dotplot(df, metric = metric_roc)
 ```
 
 
 Which model is the best?  
+
+According to the ROC results, the third model is best, maximizing area under the ROC curve. Interestingly, the best two and worst two models are the same as the ones identified by accuracy evaluation.
 
 ### 2d)
 
@@ -349,7 +483,21 @@ By default, two other metrics are calculated by `caret` when we use the ROC AUC 
 
 #### SOLUTION
 
-Add as many code chunks and as much text as you feel are necessary.  
+##### Summary
+
+```{r}
+roc_results %>% summary
+```
+
+##### Dotplot
+
+```{r}
+roc_results %>% dotplot(df)
+```
+
+##### Interpretation
+
+At the default threshold, the models 2 and 3 are tied in average sensitivity (TPR) across all trials. Similarly, model 3 has the highest average specificity and therefore the lowest FPR (since FPR = 1 - specificity).
 
 ### 2e)
 
@@ -357,7 +505,7 @@ In order to visualize the ROC curve we need to understand how the resample hold-
 
 The predictions are contained with the `$pred` field of the `caret` model object. The code chunk below displays the first few rows of the predictions for the `mod_1_roc` result for you. Note that the code chunk below is not evaluated by default. When you execute the code chunk below, you will see 7 columns. The column `obs` is the observed outcome and the column `event` is the predicted probability of the `event`. The `pred` column is the model classified outcome based on the default threshold of 50%. The `rowIndex` is the row from the original data set and serves to identify the row correctly. The `Resample` column tells us which resample fold the test point was associated with.  
 
-```{r, show_results_2e, eval=FALSE}
+```{r, show_results_2e}
 mod_1_roc$pred %>% tibble::as_tibble()
 ```
 
@@ -372,22 +520,25 @@ You do not need to create the ROC curve manually in this assignment. Instead you
 #### SOLUTION
 
 ```{r, solution_02e}
-### add your code here
+mod_1_roc$pred %>% roc_curve(obs, event)
 ```
 
 
 What do you think?  
+
+Sensitivity describes the model's ability to correctly predict a positive occurrence when an event actually did occurr (i.e. the proportion of all "positive" events that the model predicted as positive). Since the threshold is very low, a very high proportion of _all_ events are predicted to be positive. This results in a high proportion of the observed events also being predicted positive, and as a result, a high amount of sensitivity.
 
 ### 2f)
 
 You will now visualize the ROC curve associated with `mod_1_roc`.  
 
 **Repeat the same steps you performed in 2e) above, except pipe the result to the `autoplot()` method.**  
-
 #### SOLUTION
 
 ```{r, solution_02f}
-### add your code here
+mod_1_roc$pred %>% 
+  roc_curve(obs, event) %>% 
+  autoplot
 ```
 
 
@@ -400,7 +551,10 @@ The ROC curve displayed in 2f) is the resample averaged ROC curve. You can exami
 #### SOLUTION
 
 ```{r, solution_02g}
-### add your code here
+mod_1_roc$pred %>%
+  group_by(Resample) %>%
+  roc_curve(obs, event) %>%
+  autoplot
 ```
 
 
@@ -411,13 +565,14 @@ A function is defined for you in the code chunk below. This function compiles al
 ```{r, make_roc_compile_function}
 compile_all_model_preds <- function(m1, m2, m3, m4, m5, m6, m7, m8)
 {
-  purrr::map2_dfr(list(m1, m2, m3, m4, m5, m6, m7, m8),
-                  as.character(seq_along(list(m1, m2, m3, m4, m5, m6, m7, m8))),
-                  function(ll, lm){
-                    ll$pred %>% tibble::as_tibble() %>% 
-                      select(obs, event, Resample) %>% 
-                      mutate(model_name = lm)
-                  })
+  purrr::map2_dfr(
+    list(m1, m2, m3, m4, m5, m6, m7, m8),
+    as.character(seq_along(list(m1, m2, m3, m4, m5, m6, m7, m8))),
+    function(ll, lm){
+      ll$pred %>% tibble::as_tibble() %>% 
+        select(obs, event, Resample) %>% 
+        mutate(model_name = lm)
+    })
 }
 ```
 
@@ -425,9 +580,16 @@ compile_all_model_preds <- function(m1, m2, m3, m4, m5, m6, m7, m8)
 The code chunk below is also completed for you. It passes the `caret` model objects with the saved predictions to the `compile_all_model_preds()` function. The result is printed for you below so you can see the column names. Notice there is a new column `model_name` which stores the name of the model associated with the resample hold-out test set predictions. By default the code chunk below is not executed.  
 
 ```{r, run_compiile_all_model_preds, eval=FALSE}
-all_model_preds <- compile_all_model_preds(mod_1_roc, mod_2_roc, mod_3_roc, 
-                                           mod_4_roc, mod_5_roc,
-                                           mod_6_roc, mod_7_roc, mod_8_roc)
+all_model_preds <- compile_all_model_preds(
+  mod_1_roc, 
+  mod_2_roc, 
+  mod_3_roc, 
+  mod_4_roc, 
+  mod_5_roc,
+  mod_6_roc, 
+  mod_7_roc, 
+  mod_8_roc
+)
 
 all_model_preds
 ```
@@ -441,11 +603,16 @@ You will now create a figure which displays the resample averaged ROC curve for 
 #### SOLUTION
 
 ```{r, solution_02h}
-### add your code here
+all_model_preds %>%
+  group_by(model_name) %>%
+  roc_curve(obs, event) %>%
+  autoplot
 ```
 
 
 What do you think?  
+
+**TODO**
 
 ## Problem 03
 
@@ -459,7 +626,6 @@ In the two previous problems, you used resampling to assess model performance. W
 hw03_test_url <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/03/hw03_test_data.csv'
 
 df_test <- readr::read_csv(hw03_test_url, col_names = TRUE)
-
 df_test <- df_test %>% 
   mutate(y = factor(y, levels = c("event", "non_event")))
 ```
@@ -476,7 +642,7 @@ df_test %>% glimpse()
 
 The first step to create the calibration curve requires making predictions. The `predict()` for a `caret` trained object function has two main arguments. The first is the model object we will use to make predictions with and the second, `newdata`, is the data set to predict. The input columns must have the same names as the inputs to the training data that trained the model.  
 
-By default, a binary classifier will return the classifications assuming a 50% threshold. As discussed in lecture, the calibration curve does not work with classifications. Instead we need the predicted probability! We can override the default predictioin behavior by setting additional arguments to the `predict()` function. Specifically, the `type` argument instructs the model to return a "type" of prediction. We want the predicted probability and so you must set `type = 'prob'` in the `predict()` function call.  
+By default, a binary classifier will return the classifications assuming a 50% threshold. As discussed in lecture, the calibration curve does not work with classifications. Instead we need the predicted probability! We can override the default prediction behavior by setting additional arguments to the `predict()` function. Specifically, the `type` argument instructs the model to return a "type" of prediction. We want the predicted probability and so you must set `type = 'prob'` in the `predict()` function call.  
 
 **Predict the hold-out test set using model 1 and assign the result to the variable `pred_test_1`. Return the predicted probability by setting the `type` argument to `'prob'`.**  
 
@@ -487,7 +653,9 @@ By default, a binary classifier will return the classifications assuming a 50% t
 #### SOLUTION
 
 ```{r, solution_03a}
-### add more code chunks if you like
+pred_test_1 <- predict(mod_1_roc, newdata = df_test, type = "prob")
+typeof(pred_test_1)
+pred_test_1 %>% head()
 ```
 
 ### 3b)
@@ -498,14 +666,15 @@ Your `pred_test_1` object should have 2 columns. The `event` column gives the pr
 
 #### SOLUTION
 
-What do you think?  
+$event = 1 - non\_event$
 
 ### 3c)
 
 The code chunk below binds the columns in `pred_test_1` with the `df_test` dataframe to create a new dataframe which includes the predicted probability of the event and the observed output, `y`, for the hold-out test set. **PLEASE NOTE**: the code chunk below is **NOT** evaluated by default. You must change the `eval` chunk option to make sure the code chunk is executed when you render the report.  
 
-```{r, assemble_pred_mod1_obj, eval=FALSE}
+```{r, assemble_pred_mod1_obj}
 test_df_1 <- df_test %>% bind_cols(pred_test_1)
+test_df_1 %>% head
 ```
 
 As discussed in lecture, the calibration curve bins or lumps the predicted probability into uniformly spaced intervals. The empirical proportion of the event within each bin must be calculated. Thus, you need to convert the numeric predicted probability into a discrete or categorical variable.  
@@ -515,8 +684,8 @@ A simple, yet effective, approach for categorizing a continuous variable is the 
 ```{r, show_how_cut_works}
 tibble::tibble(x = 0:100) %>% 
   mutate(x_bins = cut(x,
-                      breaks = seq(0, 100, by = 10),
-                      include.lowest = TRUE)) %>% 
+    breaks = seq(0, 100, by = 10),
+    include.lowest = TRUE)) %>% 
   count(x_bins)
 ```
 
@@ -530,7 +699,12 @@ You must use the `cut()` function to bin the predicted probability associated wi
 #### SOLUTION
 
 ```{r, solution_03c}
-### your code here
+test_df_1_b <- test_df_1 %>%
+  mutate(pred_bin = cut(
+    event,
+    breaks = seq(0, 1, by = .1),
+    include.lowest = TRUE
+  ))
 ```
 
 
@@ -541,8 +715,10 @@ You must use the `cut()` function to bin the predicted probability associated wi
 #### SOLUTION
 
 ```{r, solution_03d}
-### your code here
+test_df_1_b %>% count(pred_bin)
 ```
+
+This shows that I produced 10 bins from 0-1 by 0.1.
 
 
 ### 3e)
@@ -554,7 +730,8 @@ Show the counts per bin again but this time visualize the counts with a bar char
 #### SOLUTION
 
 ```{r, solution_03e}
-### your code here
+ggplot(data = test_df_1_b) + 
+  geom_bar(mapping = aes(x = pred_bin))
 ```
 
 ### 3f)
@@ -571,10 +748,17 @@ As shown in the lecture slides, we can create a stacked bar chart to get a rough
 
 What do you think?  
 
+##### Visualization
+
 ```{r, solution_03f}
-### your code here
+ggplot(data = test_df_1_b) +
+  geom_bar(mapping = aes(x = pred_bin, fill = y)) + 
+  scale_color_brewer(palette = "Set1")
 ```
 
+##### Interpretation
+
+Bins vary widely in proportion of events and nonevents. For example, the bin with lower bound `0.3` mostly contains non-events, while the bins with lower bounds `0.8` and `0.9` mostly or entirely contain events.
 
 ### 3g)
 
