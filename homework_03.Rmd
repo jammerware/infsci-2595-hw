@@ -305,7 +305,7 @@ You will ultimately visually compare the ROC curves for the different models. Un
 
 #### SOLUTION
 
-```{r, solution_02a, eval=FALSE}
+```{r, solution_02a}
 ctrl_roc <- trainControl( 
   method = "repeatedcv",
   number = 10,
@@ -443,7 +443,7 @@ You will now compile all resample results together and compare the models based 
 
 #### SOLUTION
 
-```{r, solution_02c_01, eval=FALSE}
+```{r, solution_02c_01}
 roc_results <- resamples(list(mod_1 = mod_1_roc,
                               mod_2 = mod_2_roc,
                               mod_3 = mod_3_roc,
@@ -579,7 +579,7 @@ compile_all_model_preds <- function(m1, m2, m3, m4, m5, m6, m7, m8)
 
 The code chunk below is also completed for you. It passes the `caret` model objects with the saved predictions to the `compile_all_model_preds()` function. The result is printed for you below so you can see the column names. Notice there is a new column `model_name` which stores the name of the model associated with the resample hold-out test set predictions. By default the code chunk below is not executed.  
 
-```{r, run_compiile_all_model_preds, eval=FALSE}
+```{r, run_compiile_all_model_preds}
 all_model_preds <- compile_all_model_preds(
   mod_1_roc, 
   mod_2_roc, 
@@ -766,7 +766,7 @@ Instead of showing the counts within each bin, let's change the bar chart so the
 
 **Recreate the stacked bar chart from the previous problem, but this time set the `position` argument to `'fill'` within the `geom_bar()` layer. The `position` argument should be specified outside the `aes()` function with `geom_bar()`. You must continue to map the `fill` aesthetic to the observed outcome.**  
 
-**Are the empirical proptions of the event consistent with the predicted probability for model 1?**  
+**Are the empirical proportions of the event consistent with the predicted probability for model 1?**  
 
 *HINT*: Pay close attention to the bar chart colors!  
 
@@ -775,9 +775,12 @@ Instead of showing the counts within each bin, let's change the bar chart so the
 What do you think?  
 
 ```{r, solution_03g}
-### your code here
+ggplot(data = test_df_1_b) +
+  geom_bar(mapping = aes(x = pred_bin, fill = y), position = "fill") + 
+  scale_color_brewer(palette = "Set1")
 ```
 
+My interpretation of this figure is that it suggests a miscalibrated classifier. For example, the first bin contains events with predicted probability less than `0.1`. However, nearly half of the observations in this bin were events. In the `0.3-0.4` bin, we would expect roughly 35% or so of the observations to represent an actual event; empirically, we see that less than 20% of them are.
 
 ## Problem 04
 
@@ -787,11 +790,22 @@ This problem is open ended. You are free to calculate the event proportions howe
 
 ### 4a)
 
-**Calculate the empirical propotion of events within each predicted probability bin associated with model 1. Although you are free to perform the calculations however you like, the results should be stored in a tibble (dataframe) named `my_calcurve_1` object. Your object should have columns for the `pred_bin`, the event proportion in the bin named `prop_event`, and the midpoint of the bin named `mid_bin`. Your `my_calcurve_1` object can have other columns, but those three columns are required.**  
+**Calculate the empirical proportion of events within each predicted probability bin associated with model 1. Although you are free to perform the calculations however you like, the results should be stored in a tibble (dataframe) named `my_calcurve_1` object. Your object should have columns for the `pred_bin`, the event proportion in the bin named `prop_event`, and the midpoint of the bin named `mid_bin`. Your `my_calcurve_1` object can have other columns, but those three columns are required.**  
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary.  
+```{r}
+my_cal_curve_1 <- test_df_1_b %>%
+  select(c("event", "pred_bin", "y")) %>%
+  as_tibble() %>%
+  mutate(mid_bin = as.numeric(pred_bin) * .1 - .05) %>%
+  add_count(pred_bin, name = "pred_bin_count") %>%
+  group_by(pred_bin) %>%
+  mutate(prop_event = sum(ifelse(y == "event", 1, 0)) / pred_bin_count)
+
+my_cal_curve_1 %>% glimpse
+```
+ 
 
 ### 4b)
 
@@ -805,10 +819,24 @@ You will now create the calibration curve associated with model 1's predictions 
 
 What do you think?  
 
-```{r, solution_04b}
-### your code here
-```
+##### Visualization
 
+```{r, solution_04b}
+my_cal_curve_1 %>%
+  ggplot(mapping = aes(x = mid_bin, y = prop_event)) +
+  geom_line() +
+  geom_point() + 
+  geom_abline(
+    slope = 1, 
+    intercept = 0, 
+    color = "grey", 
+    linetype = "dashed"
+  ) + 
+  coord_equal(xlim = c(0,1), ylim = c(0,1))
+```
+##### Interpretation
+
+This appears to communicate similar information to the stacked bar chart we saw above. For example, the first bar in the chart (corresponding to the first and therefore lowest-probability bin) shows a disproportionately high number of predicted events, and we see that reflected here through the dot appearing high above the 45 degree line. As in the bar chart, we see more expected values for the .6, .8, and .9 bins.
 
 ### 4c)
 
@@ -818,19 +846,27 @@ Now it's time to create the necessary objects associated with model 3 and model 
 
 #### SOLUTION
 
+##### Model 3
+
 ```{r, solution_04c}
-### add more code chunks if you like
+pred_test_3 <- predict(mod_3_roc, newdata = df_test, type = "prob")
+pred_test_3 %>% head
 ```
 
+##### Model 8
+
+```{r, solution_04c_model8}
+pred_test_8 <- predict(mod_8_roc, newdata = df_test, type = "prob")
+pred_test_8 %>% head
+```
 
 ### 4d)
 
 The code chunk below is completed for you. The model 3 and model 8 predictions are combined with the hold-out test set data so you have the predicted probabilities and observed outcome within a tibble (dataframe). **PLEASE NOTE**: the code chunk below is **NOT** evaluated by default. You must change the `eval` chunk option to make sure the code chunk is executed when you render the report.  
 
 
-```{r, make_test_dfs_for_3_8, eval=FALSE}
+```{r, make_test_dfs_for_3_8}
 test_df_3 <- df_test %>% bind_cols(pred_test_3)
-
 test_df_8 <- df_test %>% bind_cols(pred_test_8)
 ```
 
@@ -840,7 +876,20 @@ test_df_8 <- df_test %>% bind_cols(pred_test_8)
 #### SOLUTION
 
 ```{r, solution_04d}
-### add more chunks if you like
+test_df_3_b <- test_df_3 %>% 
+  mutate(pred_bin = cut(
+    event,
+    breaks = seq(0, 1, by = .1),
+    include.lowest = TRUE
+  ))
+
+test_df_8_b <- test_df_8 %>% 
+  mutate(pred_bin = cut(
+    event,
+    breaks = seq(0, 1, by = .1),
+    include.lowest = TRUE
+  ))
+  
 ```
 
 
@@ -851,7 +900,9 @@ test_df_8 <- df_test %>% bind_cols(pred_test_8)
 #### SOLUTION
 
 ```{r, solution_04e}
-### your code here
+test_df_3_b %>%
+  ggplot() + 
+  geom_bar(mapping = aes(x = pred_bin, fill = y))
 ```
 
 ### 4f)
@@ -861,9 +912,10 @@ test_df_8 <- df_test %>% bind_cols(pred_test_8)
 #### SOLUTION
 
 ```{r, solution_04f}
-### your code here
+test_df_8_b %>%
+  ggplot() + 
+  geom_bar(mapping = aes(x = pred_bin, fill = y))
 ```
-
 
 ## Problem 05
 
@@ -871,11 +923,20 @@ Rather than using the stacked filled bar charts to represent the calibration cur
 
 ### 5a)
 
-**Calculate the empirical propotion of events within each predicted probability bin associated with model 3. Although you are free to perform the calculations however you like, the results should be stored in a tibble (dataframe) named `my_calcurve_3` object. Your object should have columns for the `pred_bin`, the event proportion in the bin named `prop_event`, and the midpoint of the bin named `mid_bin`. Your `my_calcurve_3` object can have other columns, but those three columns are required.**  
+**Calculate the empirical proportion of events within each predicted probability bin associated with model 3. Although you are free to perform the calculations however you like, the results should be stored in a tibble (dataframe) named `my_calcurve_3` object. Your object should have columns for the `pred_bin`, the event proportion in the bin named `prop_event`, and the midpoint of the bin named `mid_bin`. Your `my_calcurve_3` object can have other columns, but those three columns are required.**  
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary.  
+```{r}
+my_calcurve_3 <- test_df_3_b %>%
+  select(c("event", "pred_bin", "y")) %>%
+  as_tibble() %>%
+  mutate(mid_bin = as.numeric(pred_bin) * .1 - .05) %>%
+  add_count(pred_bin, name = "pred_bin_count") %>%
+  group_by(pred_bin) %>%
+  mutate(prop_event = sum(ifelse(y == "event", 1, 0)) / pred_bin_count)
+```
+
 
 ### 5b)
 
@@ -885,6 +946,18 @@ Add as many code chunks as you feel are necessary.
 
 Add as many code chunks as you feel are necessary.  
 
+```{r}
+my_calcurve_8 <- test_df_8_b %>%
+  select(c("event", "pred_bin", "y")) %>%
+  as_tibble() %>%
+  mutate(mid_bin = as.numeric(pred_bin) * .1 - .05) %>%
+  add_count(pred_bin, name = "pred_bin_count") %>%
+  group_by(pred_bin) %>%
+  mutate(prop_event = sum(ifelse(y == "event", 1, 0)) / pred_bin_count)
+
+my_calcurve_8 %>% glimpse
+```
+
 
 ### 5c)
 
@@ -893,7 +966,17 @@ Add as many code chunks as you feel are necessary.
 #### SOLUTION
 
 ```{r, solution_05c}
-### your code here
+my_calcurve_3 %>%
+  ggplot(mapping = aes(x = mid_bin, y = prop_event)) +
+  geom_line() +
+  geom_point() + 
+  geom_abline(
+    slope = 1, 
+    intercept = 0, 
+    color = "grey", 
+    linetype = "dashed"
+  ) + 
+  coord_equal(xlim = c(0,1), ylim = c(0,1))
 ```
 
 ### 5d)
@@ -903,16 +986,28 @@ Add as many code chunks as you feel are necessary.
 #### SOLUTION
 
 ```{r, solution_05d}
-### your code here
+my_calcurve_8 %>%
+  ggplot(mapping = aes(x = mid_bin, y = prop_event)) +
+  geom_line() +
+  geom_point() + 
+  geom_abline(
+    slope = 1, 
+    intercept = 0, 
+    color = "grey", 
+    linetype = "dashed"
+  ) + 
+  coord_equal(xlim = c(0,1), ylim = c(0,1))
 ```
 
 ### 5d)
 
-**Based on your calibration curves, which of the three models appears the most well calibrated? Is it easy obvious which model performs better using this approach? What are the most obvious aspects of performance based on your calibration curves?**  
+**Based on your calibration curves, which of the three models appears the most well calibrated? Is it easily obvious which model performs better using this approach? What are the most obvious aspects of performance based on your calibration curves?**  
 
 #### SOLUTION
 
 What do you think?  
+
+Of these, model 3 seems the best calibrated, as most of its proportions align with empirical results. The most interesting finding revealed here is that while the winning model is decent, it incorrectly predicts the 40% bin noticeably. Model 8 seems like it may be overfitted, as it does not generate extremely high or low-probability predictions (suggesting high bias?)
 
 ## Problem 06
 
@@ -932,10 +1027,15 @@ The formula therefore gives the binary outcome variable name to the **left** of 
 
 #### SOLUTION
 
+##### Visualization
+
 ```{r, solution_06a}
-### your code here
+calibration(y ~ event, test_df_1, cuts = 10) %>% xyplot
 ```
 
+##### Interpretation
+
+Yes, the figure is consistent with the one I generated earlier in the assignment.
 
 ### 6b)
 
@@ -945,10 +1045,15 @@ The formula therefore gives the binary outcome variable name to the **left** of 
 
 #### SOLUTION
 
+##### Visualization
+
 ```{r, solution_06b}
-### your code here
+calibration(y ~ event, test_df_3, cuts = 10) %>% xyplot
 ```
 
+##### Interpretation
+
+Yes, the figure is consistent with the one I generated earlier in the assignment.
 
 ### 6c)
 
@@ -958,7 +1063,12 @@ The formula therefore gives the binary outcome variable name to the **left** of 
 
 #### SOLUTION
 
+##### Visualization
+
 ```{r, solution_06c}
-### your code here
+calibration(y ~ event, test_df_8, cuts = 10) %>% xyplot
 ```
 
+##### Interpretation
+
+Yes, the figure is consistent with the one I generated earlier in the assignment (though this one correctly plots the 0-valued bins).
