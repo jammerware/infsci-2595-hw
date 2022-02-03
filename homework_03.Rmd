@@ -471,7 +471,7 @@ roc_results %>% dotplot(df, metric = metric_roc)
 
 Which model is the best?  
 
-According to the ROC results, the third model is best, maximizing area under the ROC curve. Interestingly, the best two and worst two models are the same as the ones identified by accuracy evaluation.
+According to the ROC results, the third model is best, maximizing area under the ROC curve. Interestingly, the best two and worst two models are the same as the ones identified by accuracy evaluation. This makes me more confident that model 3 is the best.
 
 ### 2d)
 
@@ -533,6 +533,7 @@ Sensitivity describes the model's ability to correctly predict a positive occurr
 You will now visualize the ROC curve associated with `mod_1_roc`.  
 
 **Repeat the same steps you performed in 2e) above, except pipe the result to the `autoplot()` method.**  
+
 #### SOLUTION
 
 ```{r, solution_02f}
@@ -612,7 +613,7 @@ all_model_preds %>%
 
 What do you think?  
 
-**TODO**
+Upon a rough visual inspection of the curves, model 3 appears to have the largest AUC. This is consistent with the `dotplot` results above which show model 3 having the highest AUC. Model 8 appears to be the least effective model because it appears to have the lowest AUC. 
 
 ## Problem 03
 

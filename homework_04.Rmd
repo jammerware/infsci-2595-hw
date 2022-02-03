@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 04"
 subtitle: "Assigned February 2, 2022; Due: February 9, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: February 9, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.
 
 ## Overview
 
@@ -45,20 +45,21 @@ player_atbats <- 602
 
 We will assume that the number of hits, $H$, is Binomially distributed, conditioned on the number of at bats, $AB$, and the probability of a successful hit, $\mu$.  
 
-**Write out the formula for the Maximum Likelihood Estimate (MLE) for the probability of a successful hit, $\mu_{ML}$, based on the number of at bats, $AB$, and number of hits, $H$. Calculate the MLE for the player based on the data provided in the above code chunk. Save the MLE to the variable `player_mle` and print the value to the screen.**  
+**Write out the formula for the Maximum Likelihood Estimate (MLE) for the probability of a successful hit, $\mu_{MLE}$, based on the number of at bats, $AB$, and number of hits, $H$. Calculate the MLE for the player based on the data provided in the above code chunk. Save the MLE to the variable `player_mle` and print the value to the screen.**  
 
 #### SOLUTION
 
 The MLE for the probability of a successful hit is:  
 
 $$ 
-\mu_{MLE} = ?
+\mu_{MLE} = \frac{H}{AB}
 $$
 
 For this particular example:  
 
 ```{r, solution_01a}
-### your code here
+player_mle <- player_hits / player_atbats
+player_mle
 ```
 
 ### 1b)
@@ -69,8 +70,8 @@ Let's check your answer in Problem 1a) by visualizing the log-likelihood with re
 
 #### SOLUTION
 
-$$ 
-\log \left( p \left( H \mid AB, \mu \right) \right) \propto ?
+$$
+\log \left( p \left( H \mid AB, \mu \right) \right) \propto \log \left( \mu \right) \cdot H + \log \left( 1 - \mu \right) \cdot (AB - H)
 $$
 
 ### 1c)
@@ -87,14 +88,19 @@ Let's now generate the visualization. The code chunk below is started for you. I
 
 #### SOLUTION
 
-```{r, solution_01c, eval=FALSE}
+```{r, solution_01c}
 tibble::tibble(
-  mu = 
+  mu = seq(0.1, 0.6, length.out = 101)
 ) %>% 
-  mutate()
+  mutate(log_lik = log(mu)*player_hits + log(1-mu)*(player_atbats - player_hits)) %>%
+  ggplot(mapping = aes(x = mu, y = log_lik)) +
+  geom_line() + 
+  geom_vline(xintercept = player_mle)
 ```
 
-What do you think?  
+What do you think?
+
+The MLE appears to intersect the maximum value of the un-normalized log likelihood, suggesting that it's the correct maximum likelihood estimate.
 
 ### 1d)
 
@@ -125,14 +131,10 @@ Let's now create a function to calculate the un-normalized Binomial log-likeliho
 **Complete the code chunk below by specifying the inputs to `log_binom_pmf_unnorm()` in the following order, `events`, `trials`, and `prob`. Within the function calculate the un-normalized log-likelihood and assign the result to the variable `log_lik`. Return `log_lik` as the result of the function call.**  
 
 #### SOLUTION
-
-```{r, solution_01d, eval=FALSE}
-### set the input arguments !!!
-log_binom_pmf_unnorm <- function( )
+```{r, solution_01d}
+log_binom_pmf_unnorm <- function(events, observations, mu)
 {
-  # calculate log_lik
-  
-  # return log_lik
+  log(mu)*events + log(1-mu)*(observations - events)
 }
 ```
 
@@ -146,9 +148,12 @@ Let's now use the `log_binom_pmf_unnorm()` function to recreate the figure from 
 
 ```{r, solution_01e, eval=FALSE}
 tibble::tibble(
-  mu = 
+  mu = seq(0.1, 0.6, length.out = 101)
 ) %>% 
-  mutate()
+  mutate(log_lik = log_binom_pmf_unnorm(player_hits, player_atbats, mu)) %>%
+  ggplot(mapping = aes(x = mu, y = log_lik)) + 
+  geom_line() + 
+  geom_vline(xintercept = player_mle)
 ```
 
 ### 1f)
@@ -161,11 +166,10 @@ The code chunk below defines a function `log_binom_pmf()`. You will complete the
 
 #### SOLUTION
 
-```{r, solution_01f, eval=FALSE}
-### set the input arguments!
-log_binom_pmf <- function( )
+```{r, solution_01f}
+log_binom_pmf <- function(events, observations, mu)
 {
-  # your code here
+  lchoose(events, observations) + observations * log(mu) + (events - observations) + log(1 - mu)
 }
 ```
 
@@ -177,11 +181,15 @@ The un-normalized log-likelihood is all we needed when we were interested in fin
 
 #### SOLUTION
 
-```{r, solution_01g, eval=FALSE}
+```{r, solution_01g}
 tibble::tibble(
-  mu = 
+  mu = seq(0.1, 0.6, length.out = 101)
 ) %>% 
-  mutate()
+  mutate(log_lik = log_binom_pmf(player_hits, player_atbats, mu)) %>%
+  head
+  # ggplot(mapping = aes(x = mu, y = log_lik)) + 
+  # geom_line() + 
+  # geom_vline(xintercept = player_mle)
 ```
 
 What do you think?  
