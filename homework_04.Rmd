@@ -108,7 +108,7 @@ If we were interested in evaluating the log-likelihood over and over again, it m
 
 A function in `R` has the basic syntax shown in the code chunk below. The `function()` call is used to assign the newly created function to a variable. Specifically in the example below, the newly created function is named `my_example_function()`. The function receives two input arguments, `input_1` and `input_2`. You can define functions that require zero inputs or many inputs. The actions you want the function to perform are contained within curly braces, `{}`. The last comment states you can use the `return()` function to return a data object from a function. *Alternatively*, the last line evaluated within the function will be returned by default.  
 
-```{r, show_ex_function, eval=FALSE}
+```{r, show_ex_function}
 my_example_function <- function(input_1, input_2)
 {
   ### PERFORM ACTIONS
@@ -169,7 +169,8 @@ The code chunk below defines a function `log_binom_pmf()`. You will complete the
 ```{r, solution_01f}
 log_binom_pmf <- function(events, observations, mu)
 {
-  lchoose(events, observations) + observations * log(mu) + (events - observations) + log(1 - mu)
+  # 
+  lchoose(observations, events) + log(mu)*events + log(1-mu)*(observations - events)
 }
 ```
 
@@ -186,13 +187,14 @@ tibble::tibble(
   mu = seq(0.1, 0.6, length.out = 101)
 ) %>% 
   mutate(log_lik = log_binom_pmf(player_hits, player_atbats, mu)) %>%
-  head
-  # ggplot(mapping = aes(x = mu, y = log_lik)) + 
-  # geom_line() + 
-  # geom_vline(xintercept = player_mle)
+  ggplot(mapping = aes(x = mu, y = log_lik)) +
+  geom_line() +
+  geom_vline(xintercept = player_mle)
 ```
 
 What do you think?  
+
+Yes, the MLE appears to be in roughly the same position even when including the normalization term.
 
 ## Problem 02
 
@@ -207,8 +209,13 @@ Use the `log_binom_pmf()` function to calculate the probability of observing the
 #### SOLUTION
 
 ```{r, solution_02a}
-### your code here
+# calculate the log likelihood of the outcome given a true probability of .3
+log_likelihood <- log_binom_pmf(events = player_hits, observations = player_atbats, mu = .3)
+# transform to probability
+exp(log_likelihood)
 ```
+
+Thus, the probability of observing the given number of hits/at-bats given a true probability of 0.3 is `r exp(log_likelihood)`.
 
 ### 2b)
 
@@ -219,7 +226,7 @@ For the Binomial distribution, the predefined function is `dbinom()`. It contain
 **Check your result from Problem 2a) by using the `dbinom()` function to calculate the probability of observing 189 hits out of 602 at bats, assuming the probability of a hit is 0.3.**  
 
 ```{r, solution_02b}
-### your code here
+dbinom(x = player_hits, size = player_atbats, prob = 0.3)
 ```
 
 ### 2c)
@@ -230,9 +237,12 @@ For the Binomial distribution, the predefined function is `dbinom()`. It contain
 
 ```{r, solution_02c, eval=FALSE}
 tibble::tibble(
-  mu = 
+  mu = seq(0.1, 0.6, length.out = 101)
 ) %>% 
-  mutate()
+  mutate(log_lik = dbinom(x = player_hits, size = player_atbats, prob = mu, log = TRUE)) %>%
+  ggplot() +
+  geom_line(mapping = aes(x = mu, y = log_lik)) + 
+  geom_vline(xintercept = player_mle)
 ```
 
 ### 2d)
@@ -245,15 +255,17 @@ To see how this works, consider a simple coin flip example. We will flip the coi
 
 #### SOLUTION
 
-```{r, solution_02d, eval=FALSE}
-coin_probs <- 
+```{r, solution_02d}
+coin_probs <- dbinom(x = 0:5, size = 11, prob = 0.25)
 
 # print to screen
+coin_probs
 
 # length?
+length(coin_probs)
 ```
 
-?  
+The first entry in this vector corresponds to the likelihood of observing 0 heads in 11 trials given a true probability to observe heads of 0.25.
 
 ### 2e)
 
@@ -264,8 +276,10 @@ The probability of observing at most 5 heads out of 11 trials is then equal to t
 #### SOLUTION
 
 ```{r, solution_02e}
-### your code here
+sum_dbinom_result <- sum(coin_probs)
+sum_dbinom_result
 ```
+The probability is `r sum_dbinom_result`.
 
 ### 2f)
 
@@ -276,10 +290,11 @@ Alternatively, we can use the `pbinom()` function to perform this summation for 
 #### SOLUTION
 
 ```{r, solution_02f}
-### your code here
+pbinom_result <- pbinom(q = 5, size = 11, prob = 0.25)
+pbinom_result
 ```
 
-?  
+This function produces `r pbinom_result`, which is `r ifelse(all.equal(sum_dbinom_result, pbinom_result), "equal to", "**NOT equal to**")` the result from summing the output of `dbinom`.
 
 ### 2g)
 
@@ -291,9 +306,28 @@ With the `dbinom()` and `pbinom()` functions we can now work through many differ
 
 #### SOLUTION
 
+##### Probability of observing between 175 and 195 hits out of 602 at-bats assuming a true probability of 0.3
+
 ```{r, solution_02g}
-### your code here
+prob_02g = 0.3
+prob_lt_175 <- pbinom(q = 174, size = 602, prob = prob_02g)
+prob_195 <- pbinom(q = 195, size = 602, prob = prob_02g)
+prob_175_195 <- prob_195 - prob_lt_175
+prob_175_195
 ```
+
+The probability of observing 175-195 hits out of 602 at bats given a probability of 0.3 is **`r prob_175_195`**.
+
+##### Probability of observing between 165 and 205 hits out of 602 at-bats assuming a true probability of 0.3
+
+```{r, solution_02g_part_2}
+prob_lt_165 <- pbinom(q = 164, size = 602, prob = prob_02g)
+prob_205 <- pbinom(q = 205, size = 602, prob = prob_02g)
+prob_165_205 <- prob_205 - prob_lt_165
+prob_165_205
+```
+
+The probability of observing 165-205 hits out of 602 at bats given a probability of 0.3 is **`r prob_165_205`**.
 
 ## Problem 3
 
@@ -310,7 +344,7 @@ You previously wrote out the un-normalized log-Binomial likelihood in terms of t
 The equation block is started for you below.  
 
 $$ 
-\log \left( p \left( m \mid N, \mu \right) \right) \propto ?  
+\log \left( p \left( m \mid N, \mu \right) \right) \propto \log \left( \mu \right) \cdot m + \log \left( 1 - \mu \right) \cdot (N - m)
 $$
 
 ### 3b)
@@ -319,10 +353,18 @@ $$
 
 #### SOLUTION
 
-The equation block is started for you below.  
+The equation block is started for you below.
+
+**NOTE:** I assumed that the goal here was to take the beta distribution definition from the slides (which is not logarithmic) and translate it to a log-likelihood. So here's where I started:
 
 $$ 
-\log \left( p \left( \mu \mid a, b \right) \right) \propto ?  
+p \left( \mu \mid a, b \right) \propto \mu^{a - 1}(1 - \mu)^{b - 1} 
+$$
+
+Taking the log of both sides:
+
+$$ 
+\log \left( p \left( \mu \mid a, b \right) \right) \propto (a - 1) \cdot \mu + (b - 1) \cdot (1 - \mu)
 $$
 
 ### 3c)
@@ -334,6 +376,17 @@ We already know that since the Beta is conjugate to the Binomial, the posterior 
 #### SOLUTION
 
 Write out your derivation below. An equation block is started for you, but you can add as many as you feel are necessary.  
+
+##### Log likelihood
+
+$$ 
+\log \left( p \left( m \mid N, \mu \right) \right) \propto \log \left( \mu \right) \cdot m + \log \left( 1 - \mu \right) \cdot (N - m)
+$$
+##### Log prior
+
+$$ 
+\log \left( p \left( \mu \mid a, b \right) \right) \propto (a - 1) \cdot \mu + (b - 1) \cdot (1 - \mu)
+$$
 
 $$ 
 equation block  
@@ -403,34 +456,57 @@ This question is purposely open ended to also examine your programming style.
 
 Plot the "vague" prior on $\mu$.  
 
-```{r, solutioN_04a_a, eval=FALSE}
+```{r, solutioN_04a_a}
 tibble::tibble(
-  mu = 
+  mu = seq(0, 1, length.out = 1000)
 ) %>% 
-  mutate()
+  mutate(beta = dbeta(mu, shape1 = a_vague, shape2 = b_vague)) %>%
+  ggplot(mapping = aes(x = mu, y = beta)) +
+  geom_line()
 ```
 
 Plot the informative prior on $\mu$.  
 
 ```{r, solution_04a_b, eval=FALSE}
 tibble::tibble(
-  mu = 
+  mu = seq(0, 1, length.out = 1000)
 ) %>% 
-  mutate()
+  mutate(beta = dbeta(mu, shape1 = a_inform, shape2 = b_inform)) %>%
+  ggplot(mapping = aes(x = mu, y = beta)) + 
+  geom_line()
 ```
 
 ### 4b)
 
 There are 6 combinations in total between the 3 sample sizes and 2 prior types.  
-
 **Calculate the updated or posterior hyperparameters, $a_{new}$ and $b_{new}$, for each of the 6 combinations of prior type and sample size. Display the posterior hyperparameters as a table.**  
 
 #### SOLUTION
 
-You may use as many code chunks as you would like. A code chunk is started for you below.  
+This is pretty hacky. I couldn't figure out how to use `expand_grid` and similar to create all combinations but keep paired parameters (like `m` and `N` or `a` and `b`) together.
 
 ```{r, solution_04b_a}
-### your code here
+mn <- c(
+  small = c(m = m_small, N = N_small),
+  medium = c(m = m_medium, N = N_medium),
+  big = c(m = m_big, N = N_big)
+)
+
+priors <- c(
+  vague = c(a = a_vague, b = b_vague),
+  inform = c(a = a_inform, b = b_inform)
+)
+
+dataset_size <- c("small", "medium", "big")
+prior_type <- c("vague", "inform")
+
+df_4 <- expand_grid(dataset_size, prior_type) %>%
+  mutate(m = mn[paste(dataset_size, ".m", sep = "")]) %>%
+  mutate(N = mn[paste(dataset_size, ".N", sep = "")]) %>%
+  mutate(a = priors[paste(prior_type, ".a", sep = "")]) %>%
+  mutate(b = priors[paste(prior_type, ".b", sep = "")])
+df_4
+
 ```
 
 ### 4c)
