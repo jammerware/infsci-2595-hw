@@ -364,7 +364,7 @@ $$
 Taking the log of both sides:
 
 $$ 
-\log \left( p \left( \mu \mid a, b \right) \right) \propto (a - 1) \cdot \mu + (b - 1) \cdot (1 - \mu)
+\log \left( p \left( \mu \mid a, b \right) \right) \propto (a - 1) \cdot \log(\mu) + (b - 1) \cdot \log(1 - \mu)
 $$
 
 ### 3c)
@@ -377,20 +377,37 @@ We already know that since the Beta is conjugate to the Binomial, the posterior 
 
 Write out your derivation below. An equation block is started for you, but you can add as many as you feel are necessary.  
 
-##### Log likelihood
+I'm starting from here because the problem tells us to add 3a and 3b together. I'm not sure the left side of the equation is correct.
 
 $$ 
-\log \left( p \left( m \mid N, \mu \right) \right) \propto \log \left( \mu \right) \cdot m + \log \left( 1 - \mu \right) \cdot (N - m)
-$$
-##### Log prior
-
-$$ 
-\log \left( p \left( \mu \mid a, b \right) \right) \propto (a - 1) \cdot \mu + (b - 1) \cdot (1 - \mu)
+\log(Beta(\mu \mid a_{new}, b_{new})) = log(p(m \mid N, \mu)) + \log \left( p \left( \mu \mid a, b \right) \right)
 $$
 
-$$ 
-equation block  
+Substituting our equations from problems 3a and 3b:
+
+$$  
+\log(Beta(\mu \mid a_{new}, b_{new})) = \log \left( \mu \right) \cdot m + \log \left( 1 - \mu \right) \cdot (N - m) + (a - 1) \cdot \log(\mu) + (b - 1) \cdot \log(1 - \mu)
 $$
+
+Distributing coefficients and gathering like terms:
+
+$$
+\log(Beta(\mu \mid a_{new}, b_{new})) = log(\mu) \cdot m + a \cdot log(\mu) - log(\mu) + N \cdot \log(1 - \mu) - m \cdot \log(1 - \mu) + b \cdot \log(1 - \mu) - log(1 - \mu)
+$$
+
+Factoring out log terms:
+
+$$
+\log(Beta(\mu \mid a_{new}, b_{new})) = \log(\mu)\left( m + a - 1 \right) + \log(1 - \mu) \left( N - m + b - 1 \right)
+$$
+
+Removing the constants (because we're unnormalized, I guess?) and rearranging to match the order on the slides:
+
+$$
+\log(Beta(\mu \mid a_{new}, b_{new})) = \log(\mu)\left( a + m \right) + \log(1 - \mu) \left( b + (N - m) \right)
+$$
+
+So maybe $a_{new} = a + m$ and $b_{new} = b + (N - m)$?
 
 ### 3d)
 
@@ -400,10 +417,28 @@ Since the posterior distribution on $\mu$ is a Beta, a formula exists for the po
 
 #### SOLUTION
 
-You may add as many equation blocks as you feel are necessary. One is started for you below.  
+You may add as many equation blocks as you feel are necessary. One is started for you below. 
+
+We know that the posterior probability is a Beta, and our parameters are $a_{new}$ and $b_{new}$. So that distribution, I'm told, looks like this:
+
+$$
+Beta(\mu \mid a_{new}, b_{new}) = \mu^{a_{new} - 1} \times (1 - \mu)^{b_{new} - 1}
+$$
+
+Logging both sides so we can derive as the problem asks:
 
 $$ 
-equation
+f(\mu) = log(Beta(\mu \mid a_{new}, b_{new})) = (a_{new} - 1) \times \log(\mu) + (b_{new} - 1) \times log(1 - \mu)
+$$
+
+Distribute terms, maybe?
+
+$$
+f(\mu) = a_{new} \times log(\mu) - log(\mu) + b_{new} \times \log(1 - \mu) - \log(1 - \mu)
+$$
+
+$$
+f ' (\mu) = a_{new} - 1 \times 
 $$
 
 ### 3e)
