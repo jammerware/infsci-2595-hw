@@ -489,7 +489,7 @@ p \left( \mu \mid a, b \right) \propto \mu^{a - 1}(1 - \mu)^{b - 1}
 <p><span class="math display">\[
 \log(Beta(\mu \mid a_{new}, b_{new})) = \log(\mu)\left( a + m \right) + \log(1 - \mu) \left( b + (N - m) \right)
 \]</span></p>
-<p>So maybe <span class="math inline">\(a_{new} = \log(\mu)(a + m)\)</span> and <span class="math inline">\(b_{new} = \log(1-\mu)(b + (N - m))\)</span>?</p>
+<p>So maybe <span class="math inline">\(a_{new} = a + m\)</span> and <span class="math inline">\(b_{new} = b + (N - m)\)</span>?</p>
 </div>
 </div>
 <div id="d-2" class="section level3">
@@ -498,9 +498,16 @@ p \left( \mu \mid a, b \right) \propto \mu^{a - 1}(1 - \mu)^{b - 1}
 <p><strong>Derive the derivative of the un-normalized log-posterior with respect to the unknown event probability <span class="math inline">\(\mu\)</span>. Write out the derivative in terms of the updated hyperparmaeters <span class="math inline">\(a_{new}\)</span> and <span class="math inline">\(b_{new}\)</span>.</strong></p>
 <div id="solution-16" class="section level4">
 <h4>SOLUTION</h4>
-<p>You may add as many equation blocks as you feel are necessary. One is started for you below.</p>
+<p>We know that the posterior probability is a Beta, and our parameters are <span class="math inline">\(a_{new}\)</span> and <span class="math inline">\(b_{new}\)</span>. So that distribution, I’m told, looks like this:</p>
+<p><span class="math display">\[
+Beta(\mu \mid a_{new}, b_{new}) = \mu^{a_{new} - 1} \times (1 - \mu)^{b_{new} - 1}
+\]</span></p>
+<p>Logging both sides so we can derive as the problem asks:</p>
 <p><span class="math display">\[ 
-\log(p(\mu) \mid a_{new}, b_{new}) = 
+f(\mu) = log(Beta(\mu \mid a_{new}, b_{new})) = (a_{new} - 1) \times \log(\mu) + (b_{new} - 1) \times log(1 - \mu)
+\]</span></p>
+<p><span class="math display">\[
+f&#39;(\mu) = \frac{a_{new} - 1}{\mu} + \frac{b_{new} - 1}{1 - \mu}
 \]</span></p>
 </div>
 </div>
@@ -509,10 +516,20 @@ p \left( \mu \mid a, b \right) \propto \mu^{a - 1}(1 - \mu)^{b - 1}
 <p><strong>Set the derivative from your solution to Problem 3d) equal to zero and solve for the posterior mode of the unknown event probability. Denote the posterior mode as <span class="math inline">\(\mu_{MAP}\)</span>.</strong></p>
 <div id="solution-17" class="section level4">
 <h4>SOLUTION</h4>
-<p>You may add as many equation blocks as you feel are necessary. One is started for you below.</p>
 <p><span class="math display">\[ 
-\mu_{MAP}  
+0 = \frac{a_{new} - 1}{\mu} + \frac{b_{new} - 1}{1 - \mu}
 \]</span></p>
+<p><span class="math display">\[
+\frac{1 - b_{new}}{1 - \mu} = \frac{a_{new} - 1}{\mu}
+\]</span></p>
+<p><span class="math display">\[
+1 - b_{new} = \frac{a_{new} - 1}{\mu} \times (1 - \mu)
+\]</span></p>
+<p><span class="math display">\[
+\frac{1 - b_{new}}{a_{new} - 1} = \frac{1 - \mu}{\mu}
+\]</span></p>
+<p>I know that the correct formula is <span class="math inline">\(\mu = \frac{a - 1}{a + b - 2}\)</span>, so I didn’t quite get there. I think the mistake is algebraic, but I’m not sure how to simplify this better.</p>
+<p>$$</p>
 </div>
 </div>
 </div>
@@ -559,8 +576,8 @@ b_inform &lt;- 48.63</code></pre>
 </div>
 <div id="b-3" class="section level3">
 <h3>4b)</h3>
-<p>There are 6 combinations in total between the 3 sample sizes and 2 prior types.<br />
-<strong>Calculate the updated or posterior hyperparameters, <span class="math inline">\(a_{new}\)</span> and <span class="math inline">\(b_{new}\)</span>, for each of the 6 combinations of prior type and sample size. Display the posterior hyperparameters as a table.</strong></p>
+<p>There are 6 combinations in total between the 3 sample sizes and 2 prior types.</p>
+<p><strong>Calculate the updated or posterior hyperparameters, <span class="math inline">\(a_{new}\)</span> and <span class="math inline">\(b_{new}\)</span>, for each of the 6 combinations of prior type and sample size. Display the posterior hyperparameters as a table.</strong></p>
 <div id="solution-19" class="section level4">
 <h4>SOLUTION</h4>
 <p>This is pretty hacky. I couldn’t figure out how to use <code>expand_grid</code> and similar to create all combinations but keep paired parameters (like <code>m</code> and <code>N</code> or <code>a</code> and <code>b</code>) together.</p>
@@ -582,17 +599,19 @@ df_4 &lt;- expand_grid(dataset_size, prior_type) %&gt;%
   mutate(m = mn[paste(dataset_size, &quot;.m&quot;, sep = &quot;&quot;)]) %&gt;%
   mutate(N = mn[paste(dataset_size, &quot;.N&quot;, sep = &quot;&quot;)]) %&gt;%
   mutate(a = priors[paste(prior_type, &quot;.a&quot;, sep = &quot;&quot;)]) %&gt;%
-  mutate(b = priors[paste(prior_type, &quot;.b&quot;, sep = &quot;&quot;)])
+  mutate(b = priors[paste(prior_type, &quot;.b&quot;, sep = &quot;&quot;)]) %&gt;%
+  mutate(a_new = a + m) %&gt;%
+  mutate(b_new = b +(N - m))
 df_4</code></pre>
-<pre><code>## # A tibble: 6 x 6
-##   dataset_size prior_type     m     N     a     b
-##   &lt;chr&gt;        &lt;chr&gt;      &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1 small        vague          0     7  1      1  
-## 2 small        inform         0     7  4.28  48.6
-## 3 medium       vague          9   100  1      1  
-## 4 medium       inform         9   100  4.28  48.6
-## 5 big          vague        103  1000  1      1  
-## 6 big          inform       103  1000  4.28  48.6</code></pre>
+<pre><code>## # A tibble: 6 x 8
+##   dataset_size prior_type     m     N     a     b  a_new b_new
+##   &lt;chr&gt;        &lt;chr&gt;      &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+## 1 small        vague          0     7  1      1     1      8  
+## 2 small        inform         0     7  4.28  48.6   4.28  55.6
+## 3 medium       vague          9   100  1      1    10     92  
+## 4 medium       inform         9   100  4.28  48.6  13.3  140. 
+## 5 big          vague        103  1000  1      1   104    898  
+## 6 big          inform       103  1000  4.28  48.6 107.   946.</code></pre>
 </div>
 </div>
 <div id="c-3" class="section level3">
@@ -603,7 +622,23 @@ df_4</code></pre>
 <div id="solution-20" class="section level4">
 <h4>SOLUTION</h4>
 <p>You may use as many code chunks as you would like. A code chunk is started for you below.</p>
-<pre class="r"><code>### your code here</code></pre>
+<pre class="r"><code>df_5 &lt;- df_4 %&gt;%
+  mutate(posterior_mean = a_new / (a_new + b_new)) %&gt;%
+  mutate(posterior_mode = (a_new - 1)/(a_new + b_new - 2)) %&gt;%
+  mutate(percentile_05 = qbeta(.05, shape1 = a_new, shape2 = b_new)) %&gt;%
+  mutate(percentile_95 = qbeta(.95, shape1 = a_new, shape2= b_new))
+df_5</code></pre>
+<pre><code>## # A tibble: 6 x 12
+##   dataset_size prior_type     m     N     a     b  a_new b_new posterior_mean
+##   &lt;chr&gt;        &lt;chr&gt;      &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;          &lt;dbl&gt;
+## 1 small        vague          0     7  1      1     1      8           0.111 
+## 2 small        inform         0     7  4.28  48.6   4.28  55.6         0.0714
+## 3 medium       vague          9   100  1      1    10     92           0.0980
+## 4 medium       inform         9   100  4.28  48.6  13.3  140.          0.0868
+## 5 big          vague        103  1000  1      1   104    898           0.104 
+## 6 big          inform       103  1000  4.28  48.6 107.   946.          0.102 
+## # ... with 3 more variables: posterior_mode &lt;dbl&gt;, percentile_05 &lt;dbl&gt;,
+## #   percentile_95 &lt;dbl&gt;</code></pre>
 </div>
 </div>
 <div id="d-3" class="section level3">
@@ -612,7 +647,7 @@ df_4</code></pre>
 <p><strong>Discuss the behavior of the summary statistics between the two prior assumptions (vague vs informative) when the data set is small compared to “big”.</strong></p>
 <div id="solution-21" class="section level4">
 <h4>SOLUTION</h4>
-<p>Your discussion here.</p>
+<p>When the dataset is small, we see that the range of the percentiles (95th percentile - 5th percentile) is quite large, suggesting that we’re pretty uncertain about our predicted mean. In contrast, the difference between these percentiles with the large dataset is much smaller, suggesting greater certainty. As a result of the wider quantiles, the posterior mean and mode are further apart in the small dataset and much closer together in the large dataset. In both cases, the informative prior results in greater certainty than the vague prior, though it impacts the small dataset much more (i.e. the range between quantiles for the small dataset is much smaller when using the informed prior).</p>
 </div>
 </div>
 </div>

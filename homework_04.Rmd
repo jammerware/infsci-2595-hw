@@ -417,8 +417,6 @@ Since the posterior distribution on $\mu$ is a Beta, a formula exists for the po
 
 #### SOLUTION
 
-You may add as many equation blocks as you feel are necessary. One is started for you below. 
-
 We know that the posterior probability is a Beta, and our parameters are $a_{new}$ and $b_{new}$. So that distribution, I'm told, looks like this:
 
 $$
@@ -431,14 +429,8 @@ $$
 f(\mu) = log(Beta(\mu \mid a_{new}, b_{new})) = (a_{new} - 1) \times \log(\mu) + (b_{new} - 1) \times log(1 - \mu)
 $$
 
-Distribute terms, maybe?
-
 $$
-f(\mu) = a_{new} \times log(\mu) - log(\mu) + b_{new} \times \log(1 - \mu) - \log(1 - \mu)
-$$
-
-$$
-f ' (\mu) = a_{new} - 1 \times 
+f'(\mu) = \frac{a_{new} - 1}{\mu} + \frac{b_{new} - 1}{1 - \mu}
 $$
 
 ### 3e)
@@ -447,12 +439,25 @@ $$
 
 #### SOLUTION
 
-You may add as many equation blocks as you feel are necessary. One is started for you below.  
-
 $$ 
-\mu_{MAP}  
+0 = \frac{a_{new} - 1}{\mu} + \frac{b_{new} - 1}{1 - \mu}
 $$
 
+$$
+\frac{1 - b_{new}}{1 - \mu} = \frac{a_{new} - 1}{\mu}
+$$
+
+$$
+1 - b_{new} = \frac{a_{new} - 1}{\mu} \times (1 - \mu)
+$$
+
+$$
+\frac{1 - b_{new}}{a_{new} - 1} = \frac{1 - \mu}{\mu}
+$$
+
+I know that the correct formula is $\mu = \frac{a - 1}{a + b - 2}$, so I didn't quite get there. I think the mistake is algebraic, but I'm not sure how to simplify this better.
+
+$$
 
 ## Problem 4
 
@@ -514,6 +519,7 @@ tibble::tibble(
 ### 4b)
 
 There are 6 combinations in total between the 3 sample sizes and 2 prior types.  
+
 **Calculate the updated or posterior hyperparameters, $a_{new}$ and $b_{new}$, for each of the 6 combinations of prior type and sample size. Display the posterior hyperparameters as a table.**  
 
 #### SOLUTION
@@ -539,7 +545,9 @@ df_4 <- expand_grid(dataset_size, prior_type) %>%
   mutate(m = mn[paste(dataset_size, ".m", sep = "")]) %>%
   mutate(N = mn[paste(dataset_size, ".N", sep = "")]) %>%
   mutate(a = priors[paste(prior_type, ".a", sep = "")]) %>%
-  mutate(b = priors[paste(prior_type, ".b", sep = "")])
+  mutate(b = priors[paste(prior_type, ".b", sep = "")]) %>%
+  mutate(a_new = a + m) %>%
+  mutate(b_new = b +(N - m))
 df_4
 
 ```
@@ -557,7 +565,12 @@ df_4
 You may use as many code chunks as you would like. A code chunk is started for you below.  
 
 ```{r, solution_04c_a}
-### your code here
+df_5 <- df_4 %>%
+  mutate(posterior_mean = a_new / (a_new + b_new)) %>%
+  mutate(posterior_mode = (a_new - 1)/(a_new + b_new - 2)) %>%
+  mutate(percentile_05 = qbeta(.05, shape1 = a_new, shape2 = b_new)) %>%
+  mutate(percentile_95 = qbeta(.95, shape1 = a_new, shape2= b_new))
+df_5
 ```
 
 ### 4d)
@@ -568,4 +581,4 @@ The summary statistics calculated in Problem 4c) (the mean, mode, 5th percentile
 
 #### SOLUTION
 
-Your discussion here.  
+When the dataset is small, we see that the range of the percentiles (95th percentile - 5th percentile) is quite large, suggesting that we're pretty uncertain about our predicted mean. In contrast, the difference between these percentiles with the large dataset is much smaller, suggesting greater certainty. As a result of the wider quantiles, the posterior mean and mode are further apart in the small dataset and much closer together in the large dataset. In both cases, the informative prior results in greater certainty than the vague prior, though it impacts the small dataset much more (i.e. the range between quantiles for the small dataset is much smaller when using the informed prior).
