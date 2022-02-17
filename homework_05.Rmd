@@ -199,6 +199,12 @@ $$
 $$
 
 $$
+\log \left( p \left( \mu \mid \mathbf{x}, \sigma \right) \right) =  \log \left[ \frac{1}{\sqrt(2 \pi \sigma^2)} \times exp(\frac{1}{2 \sigma^2} \left( (x_n) - \mu \right)^2) \right]
+$$
+
+Distribute the log and rewrite square root as a power:
+
+$$
 \log(p( x_n \mid \mu, \sigma)) = \sum_{n = 1}^{N} \left( -\frac{1}{2} \log(2\pi) - \frac{1}{2} \log(\sigma^2) - \frac{1}{2 \sigma^2} \left( x_n - \mu \right)^2 \right)
 $$
 
@@ -349,6 +355,12 @@ $$
 \log \left[ p \left(\sigma \mid \mathbf{x}, \mu\right) \right] \propto - \frac{1}{2} \sum_{n=1}^{N}  \log \left( \sigma^2 \right) - \frac{1}{2\sigma^2} \sum_{n=1}^{N}  \left( x_n - \mu \right)^2 - \lambda \sigma
 $$
 
+We can also simplify the first term because it doesn't depend on individual values of N and is thus constant. The sum from $n=1$ to $N$ of $log(\sigma^2)$ is simply $N \log(\sigma^2)$, so we arrive finally at:
+
+$$
+\log \left[ p \left(\sigma \mid \mathbf{x}, \mu\right) \right] \propto - \frac{1}{2} N \log(\sigma^2) - \frac{1}{2\sigma^2} \sum_{n=1}^{N}  \left( x_n - \mu \right)^2 - \lambda \sigma
+$$
+
 ### 3b)
 
 When we discussed the normal-normal model for the unknown mean, we talked about the sufficient statistic being the sample average. In this situation, an unknown standard deviation with a known mean, we also have a sufficient statistic, but it is **not** the sample average. The sufficient statistic is defined for you in the equation block below:  
@@ -361,13 +373,19 @@ $$
 
 #### SOLUTION
 
-**TODO:** Figure out how to substitute v in
+Rearrange to find a useful substitution piece:
 
 $$
-
+vN = \sum_{n=1}^{N}\left( \left(x_n - \mu\right)^2 \right)
 $$
 
-No, the substitution of $v$ eliminates the dependence of the un-normalized log-posterior on $x_n$. Thus, the information in $v$ encodes the relevant info from $x_n$.
+Substituting this in above:
+
+$$
+\log \left[ p \left(\sigma \mid \mathbf{x}, \mu\right) \right] \propto - \frac{1}{2} N \log(\sigma^2) - \frac{vN}{2\sigma^2} - \lambda \sigma
+$$
+
+The substitution of $v$ eliminates the dependence of the un-normalized log-posterior on $x_n$. Thus, the information in $v$ encodes the relevant info from $x_n$, which makes sense since it is the sufficient statistic.
 
 
 ### 3c)
@@ -386,10 +404,14 @@ In this problem, you will define a function `log_post_sigma_unnorm()` which has 
 
 #### SOLUTION
 
-```{r, solution_03c, eval=FALSE}
+```{r, solution_03c}
 log_post_sigma_unnorm <- function(sigma, N, V, lambda)
 {
-  return( v - lambda * sigma)
+  term_1 <- -0.5 * (N * sigma^2)
+  term_2 <- (v * N)  / (2 * sigma^2)
+  term_3 <- lambda * sigma
+  
+  term_1 - term_2 - term_3
 }
 ```
 
@@ -404,15 +426,18 @@ Let's visualize the log-posterior with respect to $\sigma$. You will use the ass
 
 #### SOLUTION
 
-```{r, solution_03d, eval=FALSE}
+```{r, solution_03d}
 tibble::tibble(
   sigma = seq(0.5, 4.5, length.out = 101)
 ) %>% 
   mutate(log_post = log_post_sigma_unnorm(sigma, N, v, lambda = 0.75)) %>%
-  ggplot(mappings = aes(x = sigma, y = log_post))
+  ggplot(mapping = aes(x = sigma, y = log_post)) +
+  geom_line()
 ```
 
 What do you think?  
+
+It has a single mode (apparently a little under 1.5), but the parabola is a bit skewed.
 
 ### 3e)
 
@@ -468,7 +493,7 @@ To handle the substitution portion, you will define a new function `log_post_var
 
 #### SOLUTION
 
-```{r, solution_03f, eval=FALSE}
+```{r, solution_03f}
 log_post_varphi_unnorm <- function(varphi, N, v, lambda)
 {
   # back-calculate sigma given varphi
@@ -493,9 +518,9 @@ You will continue to use a prior rate parameter value of 0.75, $\lambda = 0.75$.
 
 #### SOLUTION
 
-```{r, solution_03g, eval=FALSE}
+```{r, solution_03g}
 tibble::tibble(
-  varphi = seq( , , 101)
+  varphi = seq(log(0.5), log(4.5), length.out = 101)
 ) %>% 
   mutate(log_post = log_post_varphi_unnorm(varphi, N, v, lambda = 0.75)) %>%
   ggplot(mapping = aes(x = varphi, y = log_post)) + 
@@ -504,6 +529,8 @@ tibble::tibble(
 
 
 What do you think?  
+
+Yes, the log posterior appears more parabolic here.
 
 ## Problem 04
 
@@ -666,9 +693,7 @@ Now that you have practiced working with the `optim()` function, it's time to us
 
 #### SOLUTION
 
-**TODO:** get the function figured out
-
-```{r, eval=FALSE}
+```{r}
 varphi_opt_a <- optim(
   -0.5,
   log_post_varphi_unnorm,
@@ -693,7 +718,7 @@ print(varphi_opt_a)
 
 #### SOLUTION
 
-```{r, eval=FALSE}
+```{r}
 varphi_opt_b <- optim(
   1.35,
   log_post_varphi_unnorm,
@@ -708,7 +733,7 @@ varphi_opt_b <- optim(
 
 print(varphi_opt_b)
 ```
-
+Here, the posterior mode is equal to when we started with a guess of 1.35. From our discussion in class, this is probably because the function we're optimizing is unimodal.
 
 ### 5c)
 
@@ -718,13 +743,14 @@ Let's confirm the `optim()` identified parameter value is the mode by visualizin
 
 #### SOLUTION
 
-```{r, eval=FALSE}
+```{r}
 tibble::tibble(
-  varphi = seq( , , 101)
+  varphi = seq(log(0.5), log(4.5), length.out = 101)
 ) %>% 
-  mutate(log_post = log_post_varphi_unnorm()) %>%
+  mutate(log_post = log_post_varphi_unnorm(varphi, N, v, lambda = 0.75)) %>%
   ggplot(mapping = aes(x = varphi, y = log_post)) + 
-  geom_line() + 
+  geom_line() +
   geom_vline(xintercept = varphi_opt_b$par, color = "red")
 ```
 
+Since the vertical line seems to intersect the parabola at its maximum, we can conclude that `optim()` has found the MAP of the log-transformed $\varphi$.
