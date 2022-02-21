@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 06"
 subtitle: "Assigned February 17, 2022; Due: February 24, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: February 24, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.  
 
 ## Overview
 
@@ -62,7 +62,11 @@ Start out by calculating a few summary statistics about the measurements.
 #### SOLUTION
 
 ```{r, solution_01a}
-### your code here
+print("Mean, min, and max")
+print(summary(hw06_df$x))
+
+print("SD")
+sd(hw06_df$x)
 ```
 
 ### 1b)
@@ -79,9 +83,16 @@ The SMEs feel there is approximately 95% probability the mean would be between v
 
 **Determine the values for the prior hyperparameters, $\mu_0$ and $\tau_0$, based on the information provided by the SMEs.**  
 
-#### SOLUTION
+Based on this description, we know that the MLE for $\mu_0$ is 11. 
 
-Include as many equation blocks and as much discussion text as you feel are necessary.  
+Saving these variables for use in later problems:
+
+```{r}
+mu_0 <- 10
+tau_0 <- sd(hw06_df$x)
+```
+
+
 
 ### 1c)
 
@@ -101,12 +112,12 @@ Thus, before defining the log-posterior function, you must create an `R` list wh
 
 #### SOLUTION
 
-```{r, solution_01c, eval=FALSE}
+```{r, solution_01c}
 hw06_info <- list(
-  xobs = ,### the meausrements
-  mu_0 = ,### mu_0 value
-  tau_0 = ,### tau_0 value
-  sigma_rate = ### rate (lambda) on sigma
+  xobs = hw06_df$x,
+  mu_0 = mu_0, ### mu_0 value
+  tau_0 = tau_0 ,### tau_0 value
+  sigma_rate = 0.5
 )
 ```
 
@@ -124,7 +135,7 @@ The `my_info` second argument is a generic name, but you should assign it is a l
 
 #### SOLUTION
 
-```{r, solution_01d, eval=FALSE}
+```{r, solution_01d}
 my_logpost <- function(unknowns, my_info)
 {
   # unpack the unknowns into separate variables
@@ -132,29 +143,35 @@ my_logpost <- function(unknowns, my_info)
   lik_sigma <- unknowns[2]
   
   # calculate the log-likelihood
-  log_lik <- 
+  log_lik <- sum(dnorm(my_info$xobs, mean = my_info$mu, sd = my_info$tau_0))
   
   # calculate the log-prior on mu
-  log_prior_mu <-  
+  log_prior_mu <- dnorm(lik_mu, my_info$mu_0, my_info$tau_0, log = TRUE)
   
   # calculate the log-prior on sigma
-  log_prior_sigma <-  
+  log_prior_sigma <-  dnorm(lik_sigma, my_info$tau_0, log = TRUE)
   
   # return the (un-normalized) log-posterior
-  
+  log_lik + log_prior_mu + log_prior_sigma
 }
 ```
 
 Test out the function to check that it works as expected. Try a value of 13 for $\mu$ and a value of 5 for $\sigma$. If you programmed the `my_logpost()` function correctly, you should get a value of -34.32184 printed to the screen.  
 
 ```{r, solution_01d_b}
-### 
+my_logpost(
+  unknowns = c(mu = 13, sigma = 5),
+  my_info = hw06_info
+)
 ```
 
 Test out the function to check that it works as expected. Try a value of 7 for $\mu$ and a value of 1.5 for $\sigma$. If you programmed the `my_logpost()` function correctly, you should get a value of -78.65353 printed to the screen.  
 
 ```{r, solution_01d_c}
-### 
+my_logpost(
+  unknowns = c(mu = 7, sigma = 1.5),
+  my_info = hw06_info
+)
 ```
 
 ### 1e)
@@ -162,11 +179,12 @@ Test out the function to check that it works as expected. Try a value of 7 for $
 You must define a grid of parameter values that will be applied to the `my_logpost()` function, in order to visualize the log-posterior surface. A simple way to create a full-factorial grid of combinations is with the `expand.grid()` function. The basic syntax of `expand.grid()` is shown in the example code chunk below for two variable `x1` and `x2`. The `x1` variable is a vector of just two values, `c(1, 2)`, and the variable `x2` is a vector of 3 values, `1:3`. As shown in the code chunk output printed to the screen, the `expand.grid()` function produces 6 combinations of these two variables. The variables are stored as columns. Their combinations correspond to a row within the generated object. The `expand.grid()` function takes care of the "book keeping" for us, to allow varying `x2` for all values of `x1`.  
 
 ```{r, introduce_expandgrid}
-expand.grid(x1 = c(1, 2),
-            x2 = 1:3,
-            # extra arguments I like to set
-            KEEP.OUT.ATTRS = FALSE,
-            stringsAsFactors = FALSE) %>% 
+expand.grid(
+  x1 = c(1, 2),
+  x2 = 1:3,
+  # extra arguments I like to set
+  KEEP.OUT.ATTRS = FALSE,
+  stringsAsFactors = FALSE) %>% 
   # convert to a tibble!
   as.data.frame() %>% tibble::as_tibble()
 ```
@@ -184,20 +202,22 @@ You will use the `expand.grid()` function to create a grid of combinations of `m
 
 Define the bounds on the two parameters:  
 
-```{r, solution_01e, eval=FALSE}
-mu_grid_lwr <- 
-mu_grid_upr <- 
+```{r, solution_01e}
+length_out = 251
+mu_grid_lwr <- hw06_info$mu_0 - 3 * hw06_info$tau
+mu_grid_upr <- hw06_info$mu_0 + 3 * hw06_info$tau_0
 
-sigma_grid_lwr <- 
-sigma_grid_upr <- 
+sigma_grid_lwr <- 1
+sigma_grid_upr <- pnorm(hw06_info$mu_0, mean = hw06_info$mu_0, sd = hw06_info$tau_0)
 ```
 
 Define the grid of parameter combinations.  
 
-```{r, solution_01e_b, eval=FALSE}
-param_grid <- expand.grid(mu = ,
-                          sigma = ,
-                          KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE) %>% 
+```{r, solution_01e_b}
+param_grid <- expand.grid(
+  mu = seq(mu_grid_lwr, mu_grid_upr, length.out = 251),
+  sigma = seq(sigma_grid_lwr, sigma_grid_upr, length.out = 251),
+  KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE) %>% 
   as.data.frame() %>% tibble::as_tibble()
 ```
 
@@ -215,10 +235,11 @@ This problem tests that you understand how to call a function, and how to input 
 
 #### SOLUTION
 
-```{r, solution_01f, eval=FALSE}
+```{r, solution_01f}
 eval_logpost <- function(unknown_1, unknown_2, logpost_func, logpost_info)
 {
   ### 
+  NULL
 }
 ```
 
@@ -301,7 +322,7 @@ You determined the expression for the posterior mode in Problem 2d) of Homework 
 
 #### SOLUTION
 
-What do you think?  
+To confirm this, we could plot the second derivative and observe plot's behavior about the mode. If the sign of the second derivative changes from negative to positive, it's a minimum. Otherwise, it's a maximum.
 
 ### 2c)
 
@@ -504,7 +525,6 @@ The code chunk below defines two different initial guesses for the unknown mean,
 
 ```{r, define_opt_init_guess}
 init_guess_01 <- c(10, 0.75)
-
 init_guess_02 <- c(11.75, 1.85)
 ```
 
