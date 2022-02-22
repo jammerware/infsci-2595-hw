@@ -83,13 +83,47 @@ The SMEs feel there is approximately 95% probability the mean would be between v
 
 **Determine the values for the prior hyperparameters, $\mu_0$ and $\tau_0$, based on the information provided by the SMEs.**  
 
-Based on this description, we know that the MLE for $\mu_0$ is 11. 
+#### SOLUTION
+
+##### TAU_0
+
+We are assuming a Gaussian distribution and that the prior mean $\mu_0$ is 95% likely to be between 10 and 12. Since a width of +/- 2 standard deviation contains 95% of possible values, we can produce two equations:
+
+$$
+\mu_{0} - 2\tau_0 = 10
+$$
+
+$$
+\mu_0 + 2\tau_0 = 12
+$$
+Let's use the first equation to put $\mu_0$ in terms of $\tau_0$ for substitution:
+
+$$
+\mu_0 = 10 + 2\tau_0
+$$
+
+By substitution:
+
+$$ (10 + 2\tau_0) + 2\tau_0 = 12 $$
+
+$$ 4\tau_0 = 2 $$
+
+$$ \tau_0 = 0.5 $$
+
+##### MU_0
+
+
+To find $\mu_0$, we substitute $\tau_0 = 3$ into one of the constraining equations:
+
+$$ \mu = 10 + 2 (0.5) = 11 $$
+
+Therefore, $\mu_0 = 11$ and $\tau_0 = 0.5$.
 
 Saving these variables for use in later problems:
 
 ```{r}
-mu_0 <- 10
-tau_0 <- sd(hw06_df$x)
+mu_0 <- 11
+tau_0 <- 0.5
 ```
 
 
@@ -115,8 +149,8 @@ Thus, before defining the log-posterior function, you must create an `R` list wh
 ```{r, solution_01c}
 hw06_info <- list(
   xobs = hw06_df$x,
-  mu_0 = mu_0, ### mu_0 value
-  tau_0 = tau_0 ,### tau_0 value
+  mu_0 = mu_0, 
+  tau_0 = tau_0,
   sigma_rate = 0.5
 )
 ```
@@ -143,14 +177,26 @@ my_logpost <- function(unknowns, my_info)
   lik_sigma <- unknowns[2]
   
   # calculate the log-likelihood
-  log_lik <- sum(dnorm(my_info$xobs, mean = my_info$mu, sd = my_info$tau_0))
+  log_lik <- sum(
+    dnorm(
+      x = my_info$xobs, 
+      mean = my_info$mu_0, 
+      sd = my_info$tau_0, 
+      log = TRUE
+    )
+  )
   
   # calculate the log-prior on mu
-  log_prior_mu <- dnorm(lik_mu, my_info$mu_0, my_info$tau_0, log = TRUE)
+  log_prior_mu <- dnorm(
+    lik_mu, 
+    mean = my_info$mu_0, 
+    sd = my_info$tau_0, 
+    log = TRUE
+  )
   
   # calculate the log-prior on sigma
-  log_prior_sigma <-  dnorm(lik_sigma, my_info$tau_0, log = TRUE)
-  
+  log_prior_sigma <- dexp(lik_sigma, rate = my_info$sigma_rate, log = TRUE) 
+
   # return the (un-normalized) log-posterior
   log_lik + log_prior_mu + log_prior_sigma
 }
@@ -160,7 +206,7 @@ Test out the function to check that it works as expected. Try a value of 13 for 
 
 ```{r, solution_01d_b}
 my_logpost(
-  unknowns = c(mu = 13, sigma = 5),
+  unknowns = c(mu = 13, sigma = 5, sigma_rate = .75),
   my_info = hw06_info
 )
 ```
@@ -208,7 +254,7 @@ mu_grid_lwr <- hw06_info$mu_0 - 3 * hw06_info$tau
 mu_grid_upr <- hw06_info$mu_0 + 3 * hw06_info$tau_0
 
 sigma_grid_lwr <- 1
-sigma_grid_upr <- pnorm(hw06_info$mu_0, mean = hw06_info$mu_0, sd = hw06_info$tau_0)
+sigma_grid_upr <- qnorm(0.99, mean = hw06_info$mu_0, sd = hw06_info$tau_0)
 ```
 
 Define the grid of parameter combinations.  
@@ -238,26 +284,27 @@ This problem tests that you understand how to call a function, and how to input 
 ```{r, solution_01f}
 eval_logpost <- function(unknown_1, unknown_2, logpost_func, logpost_info)
 {
-  ### 
-  NULL
+  logpost_func(c(unknown_1, unknown_2), logpost_info)
 }
 ```
 
 Test out `eval_logpost()`. You should get the same as result that you did in Problem 1d). Remember the third argument to `eval_logpost()` is the log-posterior function we want to call.  
 
 ```{r, solution_01f_b}
-### 
+eval_logpost(13, 5, my_logpost, hw06_info)
 ```
 
 ### 1g)
 
 The code chunk below uses the `purrr::map2_dfr()` function to apply the `eval_logpost()` function to all combinations of `mu` and `sigma` within `param_grid`. Be sure to set the `eval` flag to `TRUE` after you run the code chunk, because by default `eval=FALSE`. The result is assigned to the variable `log_post_result`. You can check the RStudio Environment Panel to see that the length of `log_post_result` is equal to the number of rows in `param_grid`.  
 
-```{r, apply_over_grid, eval=FALSE}
-log_post_result <- purrr::map2_dbl(param_grid$mu, param_grid$sigma,
-                                   eval_logpost,
-                                   logpost_func = my_logpost,
-                                   logpost_info = hw06_info)
+```{r, apply_over_grid}
+log_post_result <- purrr::map2_dbl(
+  param_grid$mu, 
+  param_grid$sigma,
+  eval_logpost,
+  logpost_func = my_logpost,
+  logpost_info = hw06_info)
 ```
 
 The code chunk below visualizes the log-posterior surface for you. The log-posterior surface contours are plotted in the same style presented in lecture. You are required to interpret the log-posterior surface, and include the sample average and sample standard deviation with a `geom_point()` geom object. The sample average and sample standard deviation will be displayed as an orange square marker within the figure. You will discuss how the posterior mode compares to these estimates.  
@@ -271,22 +318,23 @@ The code chunk below visualizes the log-posterior surface for you. The log-poste
 
 What do you think?  
 
-```{r, solution_01g, eval=FALSE}
+```{r, solution_01g}
 param_grid %>% 
   mutate(log_post = log_post_result,
-         log_post_2 = log_post - max(log_post)) %>% 
+    log_post_2 = log_post - max(log_post)) %>% 
   ggplot(mapping = aes(x = mu, y = sigma)) +
   geom_raster(mapping = aes(fill = log_post_2)) +
-  stat_contour(mapping = aes(z = log_post_2),
-               breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
-               size = 2.2,
-               color = "black") +
+  stat_contour(
+    mapping = aes(z = log_post_2),
+    breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
+    size = 2.2,
+    color = "black") +
   # include the sample average (xbar) and the sample standard deviation (xsd)
-  geom_point(data = tibble::tibble(xbar = , xsd = ),
+  geom_point(data = tibble::tibble(xbar = mean(hw06_df$x), xsd = sd(hw06_df$x)),
              mapping = aes(x = xbar, y = xsd),
              shape = 22,
              size = 4.5, fill = "orange", color = "steelblue") +
-  scale_fill_viridis_c(guide = FALSE, option = "viridis",
+  scale_fill_viridis_c(guide = "none", option = "viridis",
                        limits = log(c(0.01/100, 1.0))) +
   labs(x = expression(mu), y = expression(sigma)) +
   theme_bw()
