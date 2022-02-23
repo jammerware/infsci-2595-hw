@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-I completed this assignment on my own.  
+On a few questions (1d) I asked for help in the class Discord. 
 
 ## Overview
 
@@ -180,8 +180,8 @@ my_logpost <- function(unknowns, my_info)
   log_lik <- sum(
     dnorm(
       x = my_info$xobs, 
-      mean = my_info$mu_0, 
-      sd = my_info$tau_0, 
+      mean = lik_mu, 
+      sd = lik_sigma, 
       log = TRUE
     )
   )
@@ -320,8 +320,10 @@ What do you think?
 
 ```{r, solution_01g}
 param_grid %>% 
-  mutate(log_post = log_post_result,
-    log_post_2 = log_post - max(log_post)) %>% 
+  mutate(
+    log_post = log_post_result,
+    log_post_2 = log_post - max(log_post
+  )) %>% 
   ggplot(mapping = aes(x = mu, y = sigma)) +
   geom_raster(mapping = aes(fill = log_post_2)) +
   stat_contour(
@@ -330,15 +332,18 @@ param_grid %>%
     size = 2.2,
     color = "black") +
   # include the sample average (xbar) and the sample standard deviation (xsd)
-  geom_point(data = tibble::tibble(xbar = mean(hw06_df$x), xsd = sd(hw06_df$x)),
-             mapping = aes(x = xbar, y = xsd),
-             shape = 22,
-             size = 4.5, fill = "orange", color = "steelblue") +
+  geom_point(
+    data = tibble::tibble(xbar = mean(hw06_df$x), xsd = sd(hw06_df$x)),
+    mapping = aes(x = xbar, y = xsd),
+    shape = 22,
+    size = 4.5, fill = "orange", color = "steelblue") +
   scale_fill_viridis_c(guide = "none", option = "viridis",
                        limits = log(c(0.01/100, 1.0))) +
   labs(x = expression(mu), y = expression(sigma)) +
   theme_bw()
 ```
+
+It seems clear from this visualization that while the sample standard deviation is close to the estimated posterior standard deviation, but the sample average (of `r mean(hw06_df$xobs)`) is lower than the posterior estimated average, which appears to be barely under 11. I'm not sure exactly what the visualization tells us about the posterior uncertainty around $\mu$ and $\sigma$ other than that the smallest ring does not contain the sample value, suggesting that we can say with some confidence that the sample statistics are not representative of our prior beliefs.
 
 ## Problem 02
 
@@ -360,7 +365,29 @@ You wrote out the un-normalized log-posterior on $\mu$, determined the first der
 
 #### SOLUTION
 
-Include as many equation blocks as you feel are necessary.  
+In the previous assignment, I calculated the first derivative of the un-normalized log posterior on $\mu$ as:
+
+$$
+p'(\mu \mid x, \sigma) = \frac{N (\bar{x} - \mu)}{\sigma^2}
+$$
+
+Now we'll do the second derivative. $N$ can be pulled out front as a constant:
+
+$$
+p''(\mu \mid x, \sigma) = \frac{d}{d\mu} N \left[ \frac{1}{\sigma^2} \times (\bar{x} - \mu) \right]
+$$
+
+Distributing terms, we get:
+
+$$
+p''(\mu \mid x, \sigma) = \frac{d}{d\mu}N \times \left( \frac{d}{d\mu} \frac{\bar{x}}{\sigma^2} - \frac{d}{d\mu} \frac{\mu}{\sigma^2} \right)
+$$
+
+Constants drop out:
+
+$$
+p''(\mu \mid x, \sigma) = \frac{N}{\sigma^2} \frac{d}{d\mu} \left(\bar{x} - \mu \right) = -\frac{N}{\sigma^2}
+$$
 
 ### 2b)
 
@@ -370,7 +397,7 @@ You determined the expression for the posterior mode in Problem 2d) of Homework 
 
 #### SOLUTION
 
-To confirm this, we could plot the second derivative and observe plot's behavior about the mode. If the sign of the second derivative changes from negative to positive, it's a minimum. Otherwise, it's a maximum.
+To confirm this, we could set the first derivative equal to zero and solve for $\mu$. Then we can substitute this value for $\mu$ into the second derivative equation. If the value is positive, the value is a minimum mode; otherwise, it is a maximum.
 
 ### 2c)
 
@@ -386,7 +413,13 @@ where $\mathrm{m}_N$ is the Laplace Approximation posterior mean and $\mathrm{s}
 
 #### SOLUTION
 
-Include as many equation blocks as you feel are necessary.  
+##### Posterior mean
+
+Maybe I'd set the second derivative equal to zero and solve for mu?
+
+##### Posterior standard deviation
+
+SD 
 
 ### 2d)
 
@@ -396,7 +429,7 @@ We saw in lecture how the Laplace Approximation is just that, an approximation. 
 
 #### SOLUTION
 
-What do you think?  
+The Laplace approximation attempts to estimate a posterior distribution by fitting a Gaussian distribution at the mode of the posterior estimated surface. Since the model we're estimating is itself a Gaussian distribution, the "approximation" is identical to the posterior model.
 
 ## Problem 03
 
@@ -412,7 +445,8 @@ $$
 
 #### SOLUTION
 
-What do you think?  
+I assume this is because the Laplace approximation involves multiple derivations, and the log transformation makes multiplicative operations summative. It's analytically easier to compute the derivative of summed terms, so the log transformation enables easier calculation of the Laplace approximation.
+
 
 ### 3b)
 
@@ -428,7 +462,13 @@ $$
 
 #### SOLUTION
 
-Write your expression in an equation block.  
+$$
+p (\mu, \varphi \mid x) = \prod_{n=1}^{N} \{ p(x_n \mid \mu, g^{-1}(\varphi)) \} \times p(\mu \mid \mu_0, \tau_0) \times p(g^{-1}(\varphi \mid l, u)) \times \left| \frac{d}{d\varphi} \left( g^{-1}(\varphi) \right) \right|
+$$
+
+$$
+
+$$
 
 ### 3c)
 
@@ -444,7 +484,15 @@ $$
 
 Write the inverse link function in an equation block.  
 
-Write the log of the derivative adjustment in an equation block.  
+$$
+g^{-1}(\sigma) = exp(\sigma)
+$$
+
+Write the log of the derivative adjustment in an equation block.
+
+$$
+\frac{dg^{-1}(\sigma)}{d\sigma} = exp(\sigma)
+$$
 
 ### 3d)
 
@@ -460,7 +508,7 @@ Note that you will use the same list of required information, `hw06_info`, that 
 
 #### SOLUTION
 
-```{r, solution_03d, eval=FALSE}
+```{r, solution_03d}
 my_cv_logpost <- function(unknowns, my_info)
 {
   # unpack the unknowns into separate variables
@@ -468,21 +516,34 @@ my_cv_logpost <- function(unknowns, my_info)
   lik_varphi <- unknowns[2]
   
   # back transform to sigma
-  lik_sigma <- 
+  lik_sigma <- exp(lik_varphi)
   
   # calculate the log-likelihood
-  log_lik <- 
+  log_lik <- sum(
+    dnorm(
+      x = my_info$xobs, 
+      mean = lik_mu, 
+      sd = lik_sigma, 
+      log = TRUE
+    )
+  )
   
   # calculate the log-prior on mu
-  log_prior_mu <- 
+  log_prior_mu <- dnorm(
+    lik_mu, 
+    mean = my_info$mu_0, 
+    sd = my_info$tau_0, 
+    log = TRUE
+  )
   
   # calculate the log-prior on sigma
-  log_prior_sigma <- 
+  log_prior_sigma <- dexp(lik_sigma, rate = my_info$sigma_rate, log = TRUE) 
   
   # calculate the log-derivative adjustment
-  log_deriv_adjust <-  
+  log_deriv_adjust <- exp(lik_sigma) 
   
   # return the (un-normalized) log-posterior
+  log_lik + log_prior_mu + log_prior_sigma + log_deriv_adjust
   
 }
 ```
@@ -490,13 +551,13 @@ my_cv_logpost <- function(unknowns, my_info)
 Test out the function to check that it works as expected. Try a value of 13 for $\mu$ and a value of 0 for $\varphi$. If you programmed the `my_logpost()` function correctly, you should get a value of -83.66777 printed to the screen.  
 
 ```{r, solution_03d_b}
-### 
+my_cv_logpost(unknowns = c(mu = 13, phi = 0), my_info = hw06_info)
 ```
 
 Test out the function to check that it works as expected. Try a value of 7 for $\mu$ and a value of -1 for $\varphi$. If you programmed the `my_logpost()` function correctly, you should get a value of -605.1904 printed to the screen.  
 
 ```{r, solution_03d_c}
-###
+my_cv_logpost(unknowns = c(mu = 7, phi = -1), my_info = hw06_info)
 ```
 
 ### 3e)
@@ -509,18 +570,20 @@ Let's visualize what the the log-posterior surface looks like in the $\mu$, $\va
 
 Define the bounds on $\varphi$ for the grid.  
 
-```{r, solution_03e_a, eval=FALSE}
-varphi_grid_lwr <- 
-varphi_grid_upr <- 
+```{r, solution_03e_a}
+varphi_grid_lwr <- log(sigma_grid_lwr)
+varphi_grid_upr <- log(sigma_grid_upr)
 ```
 
 Create the grid of full-factorial combinations with $\mu$.  
 
-```{r, solution_03e_b, eval=FALSE}
-cv_param_grid <- expand.grid(mu = , 
-                             varphi = , 
-                             KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE) %>%  
-  as.data.frame() %>% tibble::as_tibble()
+```{r, solution_03e_b}
+cv_param_grid <- expand.grid(
+  mu = seq(mu_grid_lwr, mu_grid_upr, length.out = 251), 
+  varphi = seq(varphi_grid_lwr, varphi_grid_upr, length.out = 251), 
+  KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE) %>%  
+  as.data.frame() %>% 
+  tibble::as_tibble()
 ```
 
 ### 3f)
@@ -529,8 +592,13 @@ The `eval_logpost()` function was defined using generic variable names in order 
 
 **Apply the `eval_logpost()` function to every combination of variables in `cv_param_grid`. You must use the `purrr::map2_dbl()` function to functionally loop over all combinations in `cv_param_grid`. You may follow the code example provided in Problem 1g). However, be careful to change the variable names! Assign the result to the `log_post_cv_results`.**  
 
-```{r, solution_03f, eval=FALSE}
-log_post_cv_result <- purrr::map2_dbl( )
+```{r, solution_03f}
+log_post_cv_result <- purrr::map2_dbl( 
+  cv_param_grid$mu,
+  cv_param_grid$varphi,
+  eval_logpost,
+  logpost_func = my_cv_logpost,
+  logpost_info = hw06_info)
 ```
 
 
@@ -542,22 +610,24 @@ The log-posterior surface between $\mu$ and $\varphi$ is visualized for you in t
 
 #### SOLUTION
 
-```{r, solution_03g, eval=FALSE}
+```{r, solution_03g}
 cv_param_grid %>% 
-  mutate(log_post = log_post_cv_result,
-         log_post_2 = log_post - max(log_post)) %>% 
+  mutate(
+    log_post = log_post_cv_result,
+    log_post_2 = log_post - max(log_post)) %>% 
   ggplot(mapping = aes(x = mu, y = varphi)) +
   geom_raster(mapping = aes(fill = log_post_2)) +
-  stat_contour(mapping = aes(z = log_post_2),
-               breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
-               size = 2.2,
-               color = "black") +
+  stat_contour(
+    mapping = aes(z = log_post_2),
+    breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
+    size = 2.2,
+    color = "black") +
   # include the sample average (xbar) and the log-sample standard deviation (log_xsd)
-  geom_point(data = tibble::tibble(xbar = , log_xsd = ),
+  geom_point(data = tibble::tibble(xbar = mean(hw06_df$x), log_xsd = log(sd(hw06_df$x))),
              mapping = aes(x = xbar, y = log_xsd),
              shape = 22,
              size = 4.5, fill = "orange", color = "steelblue") +
-  scale_fill_viridis_c(guide = FALSE, option = "viridis",
+  scale_fill_viridis_c(guide = "none", option = "viridis",
                        limits = log(c(0.01/100, 1.0))) +
   labs(x = expression(mu), y = expression(varphi)) +
   theme_bw()
@@ -582,24 +652,29 @@ Let's first visualize these two points relative to the posterior mode, since you
 
 #### SOLUTION
 
-```{r, solution_04a, eval=FALSE}
+```{r, solution_04a}
 cv_param_grid %>% 
-  mutate(log_post = log_post_cv_result,
-         log_post_2 = log_post - max(log_post)) %>% 
+  mutate(
+    log_post = log_post_cv_result,
+    log_post_2 = log_post - max(log_post)) %>% 
   ggplot(mapping = aes(x = mu, y = varphi)) +
   geom_raster(mapping = aes(fill = log_post_2)) +
-  stat_contour(mapping = aes(z = log_post_2),
-               breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
-               size = 2.2,
-               color = "black") +
+  stat_contour(
+    mapping = aes(z = log_post_2),
+    breaks = log(c(0.01/100, 0.01, 0.1, 0.5, 0.9)),
+    size = 2.2,
+    color = "black") +
   # include the initial guess points
-  geom_point(data = tibble::tibble(attempt = as.character(1:2),
-                                   mu = ,
-                                   varphi = ),
-             mapping = aes(color = attempt),
-             size = 4.5) +
-  scale_fill_viridis_c(guide = FALSE, option = "viridis",
-                       limits = log(c(0.01/100, 1.0))) +
+  geom_point(data = tibble::tibble(
+    attempt = as.character(1:2),
+    mu = c(init_guess_01[1], init_guess_02[1]),
+    varphi = c(init_guess_02[2], init_guess_02[2])),
+    mapping = aes(color = attempt),
+    size = 4.5) +
+  scale_fill_viridis_c(
+    guide = "none",
+    option = "viridis",
+    limits = log(c(0.01/100, 1.0))) +
   labs(x = expression(mu), y = expression(varphi)) +
   theme_bw()
 ```
@@ -624,14 +699,30 @@ You will now find the posterior mode (the MAP) on the $\mu$ and $\varphi$ parame
 
 Use the first initial guess.  
 
-```{r, solution_04b_a, eval=FALSE}
-map_res_01 <- 
+```{r, solution_04b_a}
+map_res_01 <- optim(
+  par = init_guess_01,
+  fn = my_cv_logpost,
+  gr = NULL,
+  my_info = hw06_info,
+  method = "BFGS",
+  control = list(fnscale = -1, maxit = 1001),
+  hessian = TRUE
+)
 ```
 
 Use the second initial guess.  
 
-```{r, solution_04b_b, eval=FALSE}
-map_res_02 <- 
+```{r, solution_04b_b}
+map_res_02 <- optim(
+  par = init_guess_02,
+  fn = my_cv_logpost,
+  gr = NULL,
+  my_info = hw06_info,
+  method = "BFGS",
+  control = list(fnscale = -1, maxit = 1001),
+  hessian = TRUE
+)
 ```
 
 ### 4c)
@@ -644,11 +735,26 @@ You tried two different starting guesses...are the optimization results differen
 
 #### SOLUTION
 
-Include as many code chunks and discussion text as you feel are necessary.  
+Let's examine the optimization results.
+
+##### Guess 1
+
+```{r}
+map_res_01
+```
+##### Guess 2
+
+```{r}
+map_res_02
+```
+
+##### Discussion
+
+The guesses both converge independently but do not produce equal parameters, and their Hessian matrices are different. Assuming my implementation is correct, this would suggest that the log-posterior surfaces are not unimodal. I currently don't have the log posterior visualization code working, so I don't know if that's the intended insight or not.
 
 ### 4d)
 
-Finding the posterior mode is the first step in the Laplace Approximation. The second step uses the negative inverse of the Hessian matrix as the approximate posterior covariance matrix. You wil use a function, `my_laplace()`, to perform the complete Laplace Approximation. This one function is all that is needed to perform all steps of the Laplace Approximation.  
+Finding the posterior mode is the first step in the Laplace Approximation. The second step uses the negative inverse of the Hessian matrix as the approximate posterior covariance matrix. You will use a function, `my_laplace()`, to perform the complete Laplace Approximation. This one function is all that is needed to perform all steps of the Laplace Approximation.  
 
 **Complete the code chunk below. The `my_laplace()` function is adapted from the `laplace()` function from the `LearnBayes` package. Fill in the missing pieces to double check that you understand which portions of the optimization result correspond to the mode and which are used to approximate the posterior covariance matrix.**  
 
@@ -656,31 +762,36 @@ Finding the posterior mode is the first step in the Laplace Approximation. The s
 
 Complete the missing pieces of the code chunk below. The last portion of the `my_laplace()` function compiles the results into a list.  
 
-```{r, solution_04d, eval=FALSE}
+```{r, solution_04d}
 my_laplace <- function(start_guess, logpost_func, ...)
 {
   # code adapted from the `LearnBayes`` function `laplace()`
-  fit <- optim( ,
-                ,
-               gr = NULL,
-               ...,
-               method = "BFGS",
-               hessian =  TRUE,
-               control = list(fnscale = -1, maxit = 5001))
+  fit <- optim( 
+    par = start_guess,
+    fn = logpost_func,
+    gr = NULL,
+    ...,
+    method = "BFGS",
+    hessian =  TRUE,
+    control = list(fnscale = -1, maxit = 5001))
   
-  mode <-  
-  post_var_matrix <- 
+  mode <- fit$par
+  post_var_matrix <- fit$hessian
   p <- length(mode)
+  
   # we will discuss what int means in a few weeks...
   int <- p/2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, ...)
+  
   # package all of the results into a list
-  list(mode =  ,
-       var_matrix = ,
-       log_evidence = int,
-       converge = ifelse(fit$convergence == 0,
-                         "YES", 
-                         "NO"),
-       iter_counts = as.numeric(fit$counts[1]))
+  list(mode = mode,
+    var_matrix = post_var_matrix,
+    log_evidence = int,
+    converge = ifelse(
+      fit$convergence == 0,
+      "YES", 
+      "NO"),
+    iter_counts = as.numeric(fit$counts[1])
+  )
 }
 ```
 
@@ -694,11 +805,54 @@ You will now perform the Laplace Approximation to determine the approximate post
 
 Execute the Laplace Approximation.  
 
-```{r, solution_04e, eval=FALSE}
-laplace_result <-  
+```{r, solution_04e}
+laplace_result <- my_laplace(
+  start_guess = c(10, 6), # not sure what to start with here
+  logpost_func = my_cv_logpost,
+  my_info = hw06_info
+)
 ```
 
-Include as many code chunks and discussion text as you feel are necessary.  
+##### Did the solution converge?
+
+```{r}
+laplace_result$converge
+```
+
+Yes, it did.
+
+##### Posterior means on each parameter
+
+```{r}
+print(paste("Mean on mu", laplace_result$mode[1]))
+print(paste("Mean on varphi", laplace_result$mode[2]))
+```
+
+That bodes poorly.
+
+##### Posterior standard deviations on each parameter
+
+I know that the the diagonal of the Hessian gives the variance of each parameter in order, so the posterior standard deviation on mu is:
+
+```{r}
+psd_mu <- laplace_result$var_matrix[1][1]
+psd_mu
+```
+
+And the posterior standard deviation on phi is:
+
+```{r}
+psd_phi <- laplace_result$var_matrix[2][2]
+psd_phi
+```
+
+##### Posterior correlation coefficient between mu/varphi
+
+I think the posterior correlation coefficient is the covariance of mu and phi (which is in either off-diagonal of the hessian) over their multiplied standard deviations:
+
+```{r}
+laplace_result$var_matrix[1][2] / (psd_mu * psd_phi)
+```
 
 ## Problem 05
 
@@ -710,7 +864,10 @@ You will now use the Laplace Approximation to answer questions from the toy comp
 
 #### SOLUTION
 
-Include as many code chunks and discussion text as you feel are necessary.  
+```{r}
+# i dunno
+```
+
 
 ### 5b)
 
@@ -726,15 +883,18 @@ The `generate_post_samples()` function is started for you in the code chunk belo
 
 #### SOLUTION
 
-```{r, solution_05b, eval=FALSE}
+```{r, solution_05b}
 generate_post_samples <- function(mvn_info, num_samples)
 {
-  MASS::mvrnorm(n = num_samples,
-                mu = mvn_info$ ,
-                Sigma = mvn_info$ ) %>% 
-    as.data.frame() %>% tibble::as_tibble() %>% 
-    purrr::set_names(c("mu", "varphi")) %>% 
-    mutate(sigma =  )
+  MASS::mvrnorm(
+    n = num_samples,
+    mu = mvn_info$mu,
+    Sigma = mvn_info$sigma 
+    ) %>% 
+    as.data.frame() %>% 
+    tibble::as_tibble() # %>%
+    # purrr::set_names(c("mu", "varphi")) %>% 
+    # mutate(sigma = exp(varphi))
 }
 ```
 
@@ -749,9 +909,11 @@ generate_post_samples <- function(mvn_info, num_samples)
 
 #### SOLUTION
 
-```{r, solution_05c, eval=FALSE}
+```{r, solution_05c}
 set.seed(202004)
-post_samples <-  
+post_samples <- generate_post_samples(mvn_info = list(mu = mu_0, sigma = tau_0), num_samples = 1e4)
+
+summary(post_samples)
 ```
 
 Include as many code chunks and discussion text as you feel are necessary.  
@@ -764,7 +926,13 @@ Include as many code chunks and discussion text as you feel are necessary.
 
 #### SOLUTION
 
-Include as many code chunks and discussion text as you feel are necessary.  
+```{r}
+post_samples %>%
+  ggplot(mapping = aes(y = mu)) + 
+  geom_histogram(bins = 55, color = "red", opacity = 0.5) + 
+  geom_histogram(bins = 55, color = "blue")
+```
+
 
 ### 5e)
 
@@ -776,4 +944,8 @@ The toy company would like to know based on the limited data set the variation i
 
 #### SOLUTION
 
-Include as many code chunks and discussion text as you feel are necessary.  
+```{r}
+
+
+```
+
