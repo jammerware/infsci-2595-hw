@@ -322,8 +322,7 @@ What do you think?
 param_grid %>% 
   mutate(
     log_post = log_post_result,
-    log_post_2 = log_post - max(log_post
-  )) %>% 
+    log_post_2 = log_post - max(log_post)) %>% 
   ggplot(mapping = aes(x = mu, y = sigma)) +
   geom_raster(mapping = aes(fill = log_post_2)) +
   stat_contour(
@@ -623,10 +622,11 @@ cv_param_grid %>%
     size = 2.2,
     color = "black") +
   # include the sample average (xbar) and the log-sample standard deviation (log_xsd)
-  geom_point(data = tibble::tibble(xbar = mean(hw06_df$x), log_xsd = log(sd(hw06_df$x))),
-             mapping = aes(x = xbar, y = log_xsd),
-             shape = 22,
-             size = 4.5, fill = "orange", color = "steelblue") +
+  geom_point(
+    data = tibble::tibble(xbar = mean(hw06_df$x), log_xsd = log(sd(hw06_df$x))),
+    mapping = aes(x = xbar, y = log_xsd),
+    shape = 22,
+    size = 4.5, fill = "orange", color = "steelblue") +
   scale_fill_viridis_c(guide = "none", option = "viridis",
                        limits = log(c(0.01/100, 1.0))) +
   labs(x = expression(mu), y = expression(varphi)) +
