@@ -539,7 +539,7 @@ my_cv_logpost <- function(unknowns, my_info)
   log_prior_sigma <- dexp(lik_sigma, rate = my_info$sigma_rate, log = TRUE) 
   
   # calculate the log-derivative adjustment
-  log_deriv_adjust <- exp(lik_sigma) 
+  log_deriv_adjust <- lik_varphi
   
   # return the (un-normalized) log-posterior
   log_lik + log_prior_mu + log_prior_sigma + log_deriv_adjust
@@ -727,7 +727,7 @@ map_res_02 <- optim(
 
 ### 4c)
 
-You tried two different starting guesses...are the optimization results different?  
+You tried two different starting guesses... are the optimization results different?  
 
 **Are the identified optimal parameter values the same? Are the Hessian matrices the same? Was anything different between the optimizations?**  
 
@@ -748,9 +748,13 @@ map_res_01
 map_res_02
 ```
 
-##### Discussion
+##### Discussion: optimal parameters
 
-The guesses both converge independently but do not produce equal parameters, and their Hessian matrices are different. Assuming my implementation is correct, this would suggest that the log-posterior surfaces are not unimodal. I currently don't have the log posterior visualization code working, so I don't know if that's the intended insight or not.
+The optimal parameters are the same, and the Hessian matrices produced by the optimization process are the same. This makes sense, given that the log posterior surface is unimodal, resulting in all guesses (eventually) converging to the maximum.
+
+##### Differences
+
+The main difference between the two guesses is that the second guess took more steps before it converged. I'm actually not sure why this is, since they're both roughly equidistant from the mode.
 
 ### 4d)
 
@@ -783,7 +787,8 @@ my_laplace <- function(start_guess, logpost_func, ...)
   int <- p/2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, ...)
   
   # package all of the results into a list
-  list(mode = mode,
+  list(
+    mode = mode,
     var_matrix = post_var_matrix,
     log_evidence = int,
     converge = ifelse(
@@ -807,7 +812,8 @@ Execute the Laplace Approximation.
 
 ```{r, solution_04e}
 laplace_result <- my_laplace(
-  start_guess = c(10, 6), # not sure what to start with here
+  # i'm making the assumption that we're supposed to start from the approximated 
+  start_guess = c(map_res_01$par[1], map_res_01$par[2]),
   logpost_func = my_cv_logpost,
   my_info = hw06_info
 )
@@ -828,21 +834,19 @@ print(paste("Mean on mu", laplace_result$mode[1]))
 print(paste("Mean on varphi", laplace_result$mode[2]))
 ```
 
-That bodes poorly.
-
 ##### Posterior standard deviations on each parameter
 
 I know that the the diagonal of the Hessian gives the variance of each parameter in order, so the posterior standard deviation on mu is:
 
 ```{r}
-psd_mu <- laplace_result$var_matrix[1][1]
+psd_mu <- laplace_result$var_matrix[1, 1]
 psd_mu
 ```
 
 And the posterior standard deviation on phi is:
 
 ```{r}
-psd_phi <- laplace_result$var_matrix[2][2]
+psd_phi <- laplace_result$var_matrix[2, 2]
 psd_phi
 ```
 
@@ -851,7 +855,7 @@ psd_phi
 I think the posterior correlation coefficient is the covariance of mu and phi (which is in either off-diagonal of the hessian) over their multiplied standard deviations:
 
 ```{r}
-laplace_result$var_matrix[1][2] / (psd_mu * psd_phi)
+laplace_result$var_matrix[1, 2] / (psd_mu * psd_phi)
 ```
 
 ## Problem 05
@@ -864,10 +868,11 @@ You will now use the Laplace Approximation to answer questions from the toy comp
 
 #### SOLUTION
 
-```{r}
-# i dunno
-```
+To do this, maybe we can sum the density in the portion of the Laplace approximated distribution that is less than the sample average?
 
+```{r}
+sum(dnorm(mean(hw06_df$x), mean = laplace_result$mode[1], sd = laplace_result$mode[2]))
+```
 
 ### 5b)
 
@@ -892,9 +897,9 @@ generate_post_samples <- function(mvn_info, num_samples)
     Sigma = mvn_info$sigma 
     ) %>% 
     as.data.frame() %>% 
-    tibble::as_tibble() # %>%
-    # purrr::set_names(c("mu", "varphi")) %>% 
-    # mutate(sigma = exp(varphi))
+    tibble::as_tibble() %>%
+    purrr::set_names(c("mu", "varphi")) %>%
+    mutate(sigma = exp(varphi))
 }
 ```
 
@@ -911,12 +916,16 @@ generate_post_samples <- function(mvn_info, num_samples)
 
 ```{r, solution_05c}
 set.seed(202004)
-post_samples <- generate_post_samples(mvn_info = list(mu = mu_0, sigma = tau_0), num_samples = 1e4)
+
+laplace_mu = laplace_result$mode[1]
+laplace_sigma = laplace_result$mode[2]
+
+post_samples <- generate_post_samples(
+  mvn_info = list(mu = laplace_mu, sigma = laplace_sigma), 
+  num_samples = 1e4)
 
 summary(post_samples)
 ```
-
-Include as many code chunks and discussion text as you feel are necessary.  
 
 ### 5d)
 
@@ -928,9 +937,9 @@ Include as many code chunks and discussion text as you feel are necessary.
 
 ```{r}
 post_samples %>%
-  ggplot(mapping = aes(y = mu)) + 
-  geom_histogram(bins = 55, color = "red", opacity = 0.5) + 
-  geom_histogram(bins = 55, color = "blue")
+  ggplot() + 
+  geom_histogram(mapping = aes(x = mu), bins = 55, color = "red", alpha = 0.5) + 
+  geom_histogram(mapping = aes(x = sigma), bins = 55, color = "blue", alpha = 0.5)
 ```
 
 
