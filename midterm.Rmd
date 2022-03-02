@@ -700,7 +700,7 @@ summary_post_df_all_empbayes %>%
 
 **INCOMPLETE: could use more detail**
 
-When the sample size is small, the informative prior influences the the posterior distribution quite heavily. When the sample size is large, the informative prior is less influential on the posterior distribution, and the observed data is more influential.
+When the sample size is small, the informative prior influences the the posterior distribution quite heavily. When the sample size is large, the informative prior is less influential on the posterior distribution, and the observed data is more influential. We can observe this in the plot from `4g`, where we see that low numbers of trials result in a large range of uncertainty, representing the uncertainty of the prior. In contrast, high numbers of trials have lower uncertainty as we begin to approximate the true value more accurately.
 
 ## Problem 05
 
