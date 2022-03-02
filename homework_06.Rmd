@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-On a few questions (1d) I asked for help in the class Discord. 
+On one question (1d) I asked for help in the class Discord. On question 5, I asked a classmate for help understanding the call to `mvrnorm` and to see her Hessian matrix in the Laplace result, because I was getting an error due a negative Hessian matrix.
 
 ## Overview
 
@@ -370,22 +370,16 @@ $$
 p'(\mu \mid x, \sigma) = \frac{N (\bar{x} - \mu)}{\sigma^2}
 $$
 
-Now we'll do the second derivative. $N$ can be pulled out front as a constant:
+Now we'll do the second derivative. Pulling the $N$ and $\sigma$ terms out front:
 
 $$
-p''(\mu \mid x, \sigma) = \frac{d}{d\mu} N \left[ \frac{1}{\sigma^2} \times (\bar{x} - \mu) \right]
+p''(\mu \mid x, \sigma) = \frac{N}{\sigma^2}  \frac{d}{d\mu} (\bar{x} - \mu)
 $$
 
-Distributing terms, we get:
+The derivative of the inner expression $(\bar{x} - \mu)$ with respect to $\mu) is -1, so we get:
 
 $$
-p''(\mu \mid x, \sigma) = \frac{d}{d\mu}N \times \left( \frac{d}{d\mu} \frac{\bar{x}}{\sigma^2} - \frac{d}{d\mu} \frac{\mu}{\sigma^2} \right)
-$$
-
-Constants drop out:
-
-$$
-p''(\mu \mid x, \sigma) = \frac{N}{\sigma^2} \frac{d}{d\mu} \left(\bar{x} - \mu \right) = -\frac{N}{\sigma^2}
+p''(\mu \mid x, \sigma) = \frac{N}{\sigma^2} \times -1 = - \frac{N}{\sigma^2}
 $$
 
 ### 2b)
@@ -414,11 +408,11 @@ where $\mathrm{m}_N$ is the Laplace Approximation posterior mean and $\mathrm{s}
 
 ##### Posterior mean
 
-Maybe I'd set the second derivative equal to zero and solve for mu?
+**I don't have a response for this**
 
 ##### Posterior standard deviation
 
-SD 
+**I don't have a response for this**
 
 ### 2d)
 
@@ -461,12 +455,22 @@ $$
 
 #### SOLUTION
 
+The change of variables formula is:
+
 $$
 p (\mu, \varphi \mid x) = \prod_{n=1}^{N} \{ p(x_n \mid \mu, g^{-1}(\varphi)) \} \times p(\mu \mid \mu_0, \tau_0) \times p(g^{-1}(\varphi \mid l, u)) \times \left| \frac{d}{d\varphi} \left( g^{-1}(\varphi) \right) \right|
 $$
 
+Substituting in sigma for the inverse link function:
+
+$$
+p (\mu, \varphi \mid x) = \prod_{n=1}^{N} \{ p(x_n \mid \mu, \sigma) \} \times p(\mu \mid \mu_0, \tau_0) \times p(\sigma) \times \left| \frac{d}{d\varphi} \left( \sigma \right) \right|
 $$
 
+Simplifying with distribution names:
+
+$$
+p (\mu, \varphi \mid x) = \prod_{n=1}^{N} \mathrm{normal}(x_n \mid \mu, \sigma) \times \mathrm{normal}(\mu \mid \mu_o, \tau_o) \times \mathrm{Exp}\left(\sigma \mid \lambda=0.5\right) \times \left| \frac{d}{d\varphi} \left( \sigma \right) \right|
 $$
 
 ### 3c)
@@ -484,13 +488,13 @@ $$
 Write the inverse link function in an equation block.  
 
 $$
-g^{-1}(\sigma) = exp(\sigma)
+g^{-1}(\varphi) = exp(\varphi)
 $$
 
 Write the log of the derivative adjustment in an equation block.
 
 $$
-\frac{dg^{-1}(\sigma)}{d\sigma} = exp(\sigma)
+\frac{dg^{-1}(\varphi)}{d\varphi} = log(exp(\varphi)) = \varphi
 $$
 
 ### 3d)
@@ -813,7 +817,7 @@ Execute the Laplace Approximation.
 ```{r, solution_04e}
 laplace_result <- my_laplace(
   # i'm making the assumption that we're supposed to start from the approximated 
-  start_guess = c(map_res_01$par[1], map_res_01$par[2]),
+  start_guess = c(mu_0, tau_0),
   logpost_func = my_cv_logpost,
   my_info = hw06_info
 )
@@ -868,10 +872,16 @@ You will now use the Laplace Approximation to answer questions from the toy comp
 
 #### SOLUTION
 
-To do this, maybe we can sum the density in the portion of the Laplace approximated distribution that is less than the sample average?
+My guess about this is that we need to sum the density of the Laplace-approximated distribution that is less than the sample average. The Laplace result we've calculated gives us the mean of the distribution, but we need to back-transform $\varphi$ to $\sigma$ to obtain the standard deviation.
 
 ```{r}
-sum(dnorm(mean(hw06_df$x), mean = laplace_result$mode[1], sd = laplace_result$mode[2]))
+sum(
+  dnorm(
+    mean(hw06_df$x), 
+    mean = laplace_result$mode[1], 
+    sd = exp(laplace_result$mode[2])
+  )
+)
 ```
 
 ### 5b)
@@ -892,9 +902,9 @@ The `generate_post_samples()` function is started for you in the code chunk belo
 generate_post_samples <- function(mvn_info, num_samples)
 {
   MASS::mvrnorm(
-    n = num_samples,
-    mu = mvn_info$mu,
-    Sigma = mvn_info$sigma 
+      n = num_samples,
+      mu = mvn_info$mode,
+      Sigma = mvn_info$var_matrix 
     ) %>% 
     as.data.frame() %>% 
     tibble::as_tibble() %>%
@@ -914,14 +924,20 @@ generate_post_samples <- function(mvn_info, num_samples)
 
 #### SOLUTION
 
-```{r, solution_05c}
+I hit a problem here. My Hessian matrix from the Laplace result has negative numbers in it, which I think is stopping me from evaluating this code. I get:
+
+```
+Error in MASS::mvrnorm(n = num_samples, mu = mvn_info$mode, Sigma = mvn_info$var_matrix) : 
+'Sigma' is not positive definite
+```
+
+This affects my answers to 5d/5e.
+
+```{r, solution_05c, eval=FALSE}
 set.seed(202004)
 
-laplace_mu = laplace_result$mode[1]
-laplace_sigma = laplace_result$mode[2]
-
 post_samples <- generate_post_samples(
-  mvn_info = list(mu = laplace_mu, sigma = laplace_sigma), 
+  laplace_result,
   num_samples = 1e4)
 
 summary(post_samples)
@@ -935,7 +951,9 @@ summary(post_samples)
 
 #### SOLUTION
 
-```{r}
+I think this code would work if I was able to evaluate `generate_post_samples`.
+
+```{r, eval=FALSE}
 post_samples %>%
   ggplot() + 
   geom_histogram(mapping = aes(x = mu), bins = 55, color = "red", alpha = 0.5) + 
@@ -953,8 +971,16 @@ The toy company would like to know based on the limited data set the variation i
 
 #### SOLUTION
 
-```{r}
+Because i couldn't get `generate_post_samples` working, I can't complete this part. However, what I'd do if I could would be to take the mean and SD from the distribution of samples and use them to generate a normal distribution, then determine the proportion of the distribution that falls between the mean +/- 4 using one of the `norm` functions. Pnorm, I think?
 
+
+```{r, eval=FALSE}
+# double the pnorm because you want the proportion BETWEEN the mean +/- 4 and the distribution is normal
+2 * pnorm(
+    p = # mean - 4,
+    mean = # post samples mean,
+    sd = # post samples sd
+  )
 
 ```
 

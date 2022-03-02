@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 - MIDTERM"
 subtitle: "Assigned February 28, 2022; Due: March 8, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: March 8, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -68,8 +68,11 @@ Notice that in the above posterior formulation, each player has a potentially di
 
 ##### How many prior trials does this specification represent?
 
+In a beta distribution, $a$ represents the a priori number of events, and $b$ represents the a priori number of nonevents. Therefore, this specification represents $0.5 + 0.5 = 1$ event.
+
 ##### Why does it represent being uninformed about a process?
 
+The prior is uninformed because it represents a single trial and naively assumes that, given an observation, it is equally likely that an event will and will not occur.
 
 ### 1b)
 
@@ -79,7 +82,7 @@ You are using a conjugate prior to the Binomial likelihood, for each player.
 
 #### SOLUTION
 
-What do you think?  
+Because the conjugate prior distribution is a beta, the posterior distribution will also be a **beta**.
 
 ### 1c)
 
@@ -87,7 +90,21 @@ What do you think?
 
 #### SOLUTION
 
-Add your equation blocks here.  
+I know that the formula for the posterior distribution based on a beta prior is:
+
+$$
+p(\mu \mid m, N) = Beta(\mu \mid a + m, b + (N-m))
+$$
+
+I also know that the $a + m$ and $b + (N - m)$ terms correspond to $a_{new}$ and $b_{new}$, respectively, so I think:
+
+$$
+a_{new, j} = a + m_j
+$$
+
+$$
+b_{new, j} = b + (N_j - m_j)
+$$
 
 ### 1d)
 
@@ -95,8 +112,19 @@ Add your equation blocks here.
 
 #### SOLUTION
 
-```{r, solution_01d, eval=FALSE}
-post_df_focus_from_vague <- 
+**unanswered**
+
+```{r, solution_01d}
+a <- 0.5
+b <- 0.5
+
+post_df_focus_from_vague <- df_focus %>%
+  mutate(
+    anew = num_events + a,
+    bnew = (num_trials - num_events) + b
+  )
+
+post_df_focus_from_vague %>% head
 ```
 
 
@@ -106,8 +134,15 @@ post_df_focus_from_vague <-
 
 #### SOLUTION
 
-```{r, solution_01e, eval=FALSE}
-summary_post_df_focus_from_vague <- 
+```{r, solution_01e}
+summary_post_df_focus_from_vague <- post_df_focus_from_vague %>%
+  mutate(
+    post_avg = anew / (anew + bnew),
+    post_q05 = qbeta(.05, anew, bnew),
+    post_q95 = qbeta(.95, anew, bnew)
+  )
+
+summary_post_df_focus_from_vague %>% head
 ```
 
 
@@ -123,11 +158,26 @@ You will now visualize the posterior summaries for the `r nrow(df_focus)` player
 
 #### SOLUTION
 
+##### Plot
+
 ```{r, solution_01f}
-###
+summary_post_df_focus_from_vague %>%
+  # # add the MLE - the posterior mode
+  # mutate(post_mode = (anew - 1) / (anew + bnew - 2)) %>%
+  # generate the plot
+  ggplot(mapping = aes(x = as.factor(player_id))) + 
+  geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
+  geom_point(mapping = aes(y = post_avg)) + 
+  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), color = "red", shape = "square")
 ```
 
-What do you think?  
+##### Are there players with MLEs that are outside the posterior uncertainty interval?
+
+Yes. For example, players 24, 25, and 34 have an MLE below the lower bound of the posterior uncertainty interval, and players 308, 763, 791 (and others) have an MLE above the upper bound of the interval.
+
+##### Are there players with posterior mean values that are quite close to the MLEs?
+
+Many other players have an MLE within the uncertainty interval, and some of them quite close to the MLE (e.g. player 63, 169, 636, among others).
 
 ### 1g)
 
@@ -139,11 +189,19 @@ To properly apply the dodging, set the `position` argument to be `position = pos
 
 #### SOLUTION
 
+##### Plot
+
 ```{r, solution_01g}
-###
+summary_post_df_focus_from_vague %>%
+  ggplot(mapping = aes(x = as.factor(num_trials), group = player_id)) + 
+  geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95), position = position_dodge(0.2)) + 
+  geom_point(mapping = aes(y = post_avg), position = position_dodge(0.2)) + 
+  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), position = position_dodge(0.2), color = "red", shape = "square")
 ```
 
-What do you think?  
+##### Based on your visualization, which players have high posterior uncertainty in the event probability?
+
+From this visualization, we can see that players with fewer trials have higher posterior uncertainty (and tend to have posterior MLEs outside these larger intervals). This makes intuitive sense - the less we know about a player's performance (as defined by the number of observations), the greater our uncertainty about their likelihood to catch and the more likely we are to estimate their likelihood incorrectly.
 
 ## Problem 02
 
@@ -163,7 +221,7 @@ Pay close attention to the subscripts in the above expression. And notice that t
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary to show the steps to derive the answer.  
+Add as many equation blocks as you feel are necessary to show the steps to derive the answer.
 
 ### 2b)
 
@@ -260,7 +318,10 @@ The Beta prior defines the prior belief on a probability (a fraction). From an E
 #### SOLUTION
 
 ```{r, solution_03a}
-###
+df_all %>%
+  mutate(catch_rate = num_events / num_trials) %>%
+  ggplot(mapping = aes(x = catch_rate)) +
+  geom_histogram(binwidth = 0.05)
 ```
 
 
@@ -271,12 +332,20 @@ The Beta prior defines the prior belief on a probability (a fraction). From an E
 **What can you say about the observations of the players with greater than 25 targets?**  
 
 #### SOLUTION
-
-What do you think?  
+ 
+##### Plot
 
 ```{r, solution_03b}
-### 
+df_all %>%
+  mutate(catch_rate = num_events / num_trials) %>%
+  ggplot(mapping = aes(x = catch_rate)) +
+  geom_histogram(binwidth = 0.05) +
+  facet_wrap(~ num_trials > 24,labeller = label_both)
 ```
+
+##### What can you say about the observations of the players with greater than 25 targets?
+
+The distribution of catch rates for players with 25 or more targets is narrower, suggesting that multiple trials beget a regression to some sample mean. It also begins to look more like a normal distribution. 
 
 ### 3c)
 
@@ -286,8 +355,14 @@ To keep things simple for now, you will estimate the prior parameters, $a$ and $
 
 #### SOLUTION
 
-```{r, solution_03c, eval=FALSE}
-df_24 <- 
+I'm also adding `catch_rate` to the tibble for use in later problems.
+
+```{r, solution_03c}
+df_24 <- df_all %>%
+  filter(num_trials > 24) %>%
+  mutate(catch_rate = num_events / num_trials)
+
+df_24 %>% summary()
 ```
 
 
@@ -321,43 +396,44 @@ $$
 
 Define the list of required information. The observed data in your `my_beta_loglik()` must be named `theta`.  
 
-```{r, solution_03d_a, eval=FALSE}
+```{r, solution_03d_a}
 info_for_ab <- list(
-  theta = 
+  theta = df_24$num_events / df_24$num_trials
 )
 ```
 
 Define the Beta log-likelihood. The first element in `unknowns` is the log-transformed $a$ parameter and the second element is the log-transformed $b$ parameter. You are allowed to use built in density functions to complete this question.    
 
-```{r, solution_03d_b, eval=FALSE}
+```{r, solution_03d_b}
 my_beta_loglik <- function(unknowns, my_info)
 {
   # unpack the log-transformed shape parameters
-  log_a <- 
-  log_b <- 
+  log_a <- unknowns[1]
+  log_b <- unknowns[2]
   
   # back transform
-  a <- 
-  b <- 
+  a <- exp(a)
+  b <- exp(b)
   
   # calculate the log-likelihood for all observations
-  log_lik <-
+  # Log-likelihood function is a logarithmic transformation of the likelihood function
+  log_lik <- log(dbeta(my_info$theta, a, b))
   
   # account for the change of variables
-  
+  log_lik
 }
 ```
 
 Try out values of -2 for both log-transformed parameters. If your function is coded correctly you should get a value of -571.8519.  
 
 ```{r, solution_03d_c}
-###
+my_beta_loglik(unknowns = c(-2, -2), my_info = info_for_ab)
 ```
 
 Try out values of 2.5 for both log-transformed parameters. If your function is coded correctly you should get a value of -254.3934.  
 
 ```{r, solution_03d_d}
-### 
+my_beta_loglik(unknowns = c(2.5, 2.5), my_info = info_for_ab)
 ```
 
 
@@ -404,12 +480,19 @@ The optimal parameters in the Problem 3e) are in the log-transformed space.
 
 #### SOLUTION
 
-```{r, solution_03f, eval=FALSE}
-ab_emp_bayes <- 
+##### Back-transformation
+
+**unanswered**
+
+**My solution to this and the following problems uses the given shape parameters from `3g` rather than the derived ones, because I'm still figuring those out. I may update them to the correct values if I get there in time.**
+
+```{r, solution_03f}
+ab_emp_bayes <- list(a = 13, b = 8)
 ```
 
-How many a-priori trials?  
+##### How many a-priori trials?  
 
+**unanswered**
 
 ### 3g)
 
@@ -425,21 +508,29 @@ You will now visualize the prior distribution you calculated using the Empirical
 
 #### SOLUTION
 
-Calculate the Beta PDF based on the calculated prior hyperparameters.  
+##### Calculate the Beta PDF based on the calculated prior hyperparameters.  
 
-```{r, solution_03g, eval=FALSE}
+**incomplete**
+
+```{r, solution_03g}
 prior_for_viz <- tibble::tibble(
-  x =
+  x = seq(min(df_24$catch_rate), max(df_24$catch_rate), length.out = 1001)
 ) %>% 
-  mutate(beta_pdf = )
+  mutate(beta_pdf = dbeta(x, shape1 = ab_emp_bayes$a, shape2 = ab_emp_bayes$b))
 ```
 
-Visualize the derived prior relative to the observed "catch rates" in the data set.  
+##### Visualize the derived prior relative to the observed "catch rates" in the data set.  
 
 ```{r, solution_03g_b}
-###
+df_24 %>%
+  ggplot(mapping = aes(x = catch_rate)) +
+  geom_histogram(mapping = aes(y = stat(density)), binwidth = 0.05) +
+  geom_line(data = prior_for_viz, mapping = aes(x = x, y = beta_pdf), color = "red", size = 1.15)
 ```
 
+##### How does the empirically derived prior distribution on the event probability compare to the observed histogram of the catch rates?
+
+Based on this curve, the prior distribution underestimates the observed average catch rate noticeably. 
 
 ### 3h)
 
@@ -450,7 +541,10 @@ Visualize the derived prior relative to the observed "catch rates" in the data s
 #### SOLUTION
 
 ```{r, solution_03h}
-###
+emp_bayes_prior_q05 <- qbeta(.05, ab_emp_bayes$a, ab_emp_bayes$b)
+emp_bayes_prior_q95 <- qbeta(.95, ab_emp_bayes$a, ab_emp_bayes$b)
+
+print(paste("5th quantile", emp_bayes_prior_q05, "95th quantile", emp_bayes_prior_q95))
 ```
 
 
@@ -467,8 +561,11 @@ If you are not comfortable with your estimates you may use the same values as in
 
 #### SOLUTION
 
-```{r, solution_04a, eval=FALSE}
-post_df_focus_empbayes <- 
+```{r, solution_04a}
+post_df_focus_empbayes <- df_focus %>%
+  mutate(
+    anew = num_events + ab_emp_bayes$a,
+    bnew = (num_trials - num_events) + ab_emp_bayes$b)
 ```
 
 ### 4b)
@@ -478,7 +575,14 @@ post_df_focus_empbayes <-
 #### SOLUTION
 
 ```{r, solution_04b, eval=FALSE}
-summary_post_df_focus_empbayes <- 
+summary_post_df_focus_empbayes <- post_df_focus_empbayes %>% 
+  mutate(
+    post_avg = anew / (anew + bnew),
+    post_q05 = qbeta(.05, anew, bnew),
+    post_q95 = qbeta(.95, anew, bnew)
+  )
+
+summary_post_df_focus_empbayes %>% head
 ```
 
 ### 4c)
@@ -491,9 +595,21 @@ You will repeat the visualizations from Problem 1) to understand the effect of y
 
 #### SOLUTION
 
+##### Plot
+
 ```{r, solution_04c}
-###
+summary_post_df_focus_empbayes %>%
+  ggplot(mapping = aes(x = as.factor(player_id))) + 
+  geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
+  geom_point(mapping = aes(y = post_avg)) + 
+  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), position = position_dodge(0.2), color = "red", shape = "square")
 ```
+
+##### How does this visualization compare to those you made using the vague unpooled estimate and the completely pooled estimate?
+
+Compared to the vague unpooled estimate, the posterior mean is much closer to the posterior mode, suggesting a better distribution fit for the posterior.
+
+**INCOMPLETE: pooled estimate**
 
 ### 4d)
 
@@ -504,7 +620,11 @@ To properly apply the dodging, set the `position` argument to be `position = pos
 #### SOLUTION
 
 ```{r, solution_04d}
-###
+summary_post_df_focus_empbayes %>%
+  ggplot(mapping = aes(x = as.factor(num_trials), group = player_id)) + 
+  geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95), position = position_dodge(0.2)) + 
+  geom_point(mapping = aes(y = post_avg), position = position_dodge(0.2)) + 
+  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), position = position_dodge(0.2), color = "red", shape = "square")
 ```
 
 
@@ -517,7 +637,12 @@ You will now calculate the posteriors for *all* players using the Empirical Baye
 #### SOLUTION
 
 ```{r, solution_04e}
-###
+post_df_all_empbayes <- df_all %>%
+   mutate(
+    anew = num_events + ab_emp_bayes$a,
+    bnew = (num_trials - num_events) + ab_emp_bayes$b)
+
+post_df_all_empbayes %>% head
 ```
 
 
@@ -525,8 +650,18 @@ You will now calculate the posteriors for *all* players using the Empirical Baye
 
 **Calculate the posterior mean, 5th quantile, and 95th quantile for each player in `post_df_all_empbayes`. You should add 3 columns using `mutate()` named `post_avg`, `post_q05`, and `post_q95`. Assign the result to the variable `summary_post_df_all_empbayes`.**  
 
+In this solution, I'm also adding the posterior MLE for use in a later problem.
+
 ```{r, solution_04f}
-###
+summary_post_df_all_empbayes <- post_df_all_empbayes %>%
+  mutate(
+    post_avg = anew / (anew + bnew),
+    post_q05 = dbeta(.05, anew, bnew),
+    post_q95 = dbeta(.95, anew, bnew),
+    post_mle = (anew - 1) / (anew + bnew - 2)
+  )
+
+summary_post_df_all_empbayes %>% head
 ```
 
 ### 4g)
@@ -538,7 +673,10 @@ You will now visualize the posterior mean, based on the Empirical Bayes informat
 #### SOLUTION
 
 ```{r, solution_04g}
-### 
+summary_post_df_all_empbayes %>%
+  ggplot() +
+  geom_point(mapping = aes(x = post_avg, y = post_mle, color = num_trials)) +
+  geom_abline(slope = 1, intercept = 0, color = "red")
 ```
 
 ### 4h)
@@ -548,16 +686,21 @@ You will now visualize the posterior mean, based on the Empirical Bayes informat
 #### SOLUTION
 
 ```{r, solution_04h}
-###
+summary_post_df_all_empbayes %>%
+  ggplot() +
+  geom_point(mapping = aes(x = num_trials, y = qbeta(.95, anew, bnew) - qbeta(.05, anew, bnew)))
+  
 ```
 
 ### 4i)
 
-**Based on your visualizations in this exam, discuss how an informative prior influences posterior when the sample size is small compared with large sample sizes.**  
+**Based on your visualizations in this exam, discuss how an informative prior influences the posterior when the sample size is small compared with large sample sizes.**  
 
 #### SOLUTION
 
-What do you think?  
+**INCOMPLETE: could use more detail**
+
+When the sample size is small, the informative prior influences the the posterior distribution quite heavily. When the sample size is large, the informative prior is less influential on the posterior distribution, and the observed data is more influential.
 
 ## Problem 05
 
@@ -570,7 +713,10 @@ Now that you have posterior distributions based on an informative prior for ever
 #### SOLUTION
 
 ```{r, solution_05a}
-###
+post_player_eval <- summary_post_df_all_empbayes %>%
+  mutate(prob_grt_67 = 1 - pbeta(.67, anew, bnew))
+
+post_player_eval %>% head
 ```
 
 
@@ -580,10 +726,19 @@ Now that you have posterior distributions based on an informative prior for ever
 
 #### SOLUTION
 
+##### Identify the top 10 players based on the posterior probability that their catch rate is greater than 0.67.
+
 ```{r, solution_05b}
-###
+post_player_eval_top10 <- post_player_eval %>%
+  arrange(desc(prob_grt_67)) %>%
+  top_n(10)
+
+post_player_eval_top10
 ```
 
+##### What do these players all have in common, besides the `prob_grt_67` value?
+
+All players have a high number of targets. The fewest number targets among these 10 players is around 120.
 
 ### 5c)
 
@@ -592,7 +747,7 @@ Now that you have posterior distributions based on an informative prior for ever
 #### SOLUTION
 
 ```{r, solution_05c}
-###
+post_player_eval_top10$num_trials %>% min()
 ```
 
 
@@ -605,7 +760,9 @@ A player with a large sample size could mean that player is well known, especial
 #### SOLUTION
 
 ```{r, solution_05d}
-###
+post_player_eval %>%
+  arrange(num_trials, desc(prob_grt_67)) %>%
+  top_n(10)
 ```
 
 

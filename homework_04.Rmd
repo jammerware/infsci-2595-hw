@@ -457,8 +457,6 @@ $$
 
 I know that the correct formula is $\mu = \frac{a - 1}{a + b - 2}$, so I didn't quite get there. I think the mistake is algebraic, but I'm not sure how to simplify this better.
 
-$$
-
 ## Problem 4
 
 Now that you have worked through the equations, it's time to study the behavior of the posterior under various conditions and assumptions. Specifically, you will examine how the posterior changes when the sample size is small, medium, and large using two different prior specifications on the unknown event probability.  
