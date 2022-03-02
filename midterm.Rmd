@@ -112,8 +112,6 @@ $$
 
 #### SOLUTION
 
-**unanswered**
-
 ```{r, solution_01d}
 a <- 0.5
 b <- 0.5
@@ -162,9 +160,6 @@ You will now visualize the posterior summaries for the `r nrow(df_focus)` player
 
 ```{r, solution_01f}
 summary_post_df_focus_from_vague %>%
-  # # add the MLE - the posterior mode
-  # mutate(post_mode = (anew - 1) / (anew + bnew - 2)) %>%
-  # generate the plot
   ggplot(mapping = aes(x = as.factor(player_id))) + 
   geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
   geom_point(mapping = aes(y = post_avg)) + 
