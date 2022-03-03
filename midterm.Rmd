@@ -216,7 +216,9 @@ Pay close attention to the subscripts in the above expression. And notice that t
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary to show the steps to derive the answer.
+$$
+log(p( \mu \mid (m, N)_j)^J_{j=1}) \propto log \left[ \prod_{j=1}^{J} \left( \binom{N}{m} \mu^m (1-\mu)^{N-m} \right) \times \mu^{a-1} (1-\mu) ^ {b-1} \right]
+$$
 
 ### 2b)
 
@@ -368,7 +370,7 @@ Since the "catch rate" is a fraction, we can use a Beta distribution as the like
 Each observation of the "catch rate" is assumed conditionally independent given the unknown $a$ and $b$ shape parameters. The observed "catch rate" will be denoted as, $\theta_j$, for each player and is defined as:  
 
 $$ 
-\theta_j = \frac{m_j}{N_J}
+\theta_j = \frac{m_j}{N_j}
 $$
 
 The likelihood on all $j=1,...,J$ catch rates is therefore the product of $J$ conditionally independent Beta distributions:  
