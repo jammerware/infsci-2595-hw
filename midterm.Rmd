@@ -220,6 +220,22 @@ $$
 log(p( \mu \mid (m, N)_j)^J_{j=1}) \propto log \left[ \prod_{j=1}^{J} \left( \binom{N}{m} \mu^m (1-\mu)^{N-m} \right) \times \mu^{a-1} (1-\mu) ^ {b-1} \right]
 $$
 
+Dropping terms on which $\mu$ does not depend:
+
+$$
+... \propto \sum_{j=1}^J \left[ m \cdot \log(\mu) + (N - m) \cdot \log(1-\mu) \right] + (a-1) \cdot \mu + (b-1) \cdot(1-\mu) 
+$$
+
+Distributing the sum, pull logs out front:
+
+$$
+... \propto \sum_{j=1}^J m
+$$
+
+$$
+\mu(a-1) + (b-1)(1-\mu)
+$$
+
 ### 2b)
 
 The summation series in your solution to 2a) can be simplified by using the average number of events, $\bar{m}$ and the average number of trials $\bar{N}$. The average number of events is defined as:  
@@ -414,7 +430,7 @@ my_beta_loglik <- function(unknowns, my_info)
   
   # calculate the log-likelihood for all observations
   # Log-likelihood function is a logarithmic transformation of the likelihood function
-  log_lik <- log(dbeta(my_info$theta, a, b))
+  log_lik <- log(pbeta(my_info$theta, a, b))
   
   # account for the change of variables
   log_lik
