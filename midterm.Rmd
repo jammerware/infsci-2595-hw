@@ -220,21 +220,12 @@ $$
 log(p( \mu \mid (m, N)_j)^J_{j=1}) \propto log \left[ \prod_{j=1}^{J} \left( \binom{N}{m} \mu^m (1-\mu)^{N-m} \right) \times \mu^{a-1} (1-\mu) ^ {b-1} \right]
 $$
 
-Dropping terms on which $\mu$ does not depend:
+Take the log of both sides:
 
 $$
-... \propto \sum_{j=1}^J \left[ m \cdot \log(\mu) + (N - m) \cdot \log(1-\mu) \right] + (a-1) \cdot \mu + (b-1) \cdot(1-\mu) 
+... \propto \sum_{j=1}^J \left[ m_j \log(\mu) + (N_j-m_j) \log(1 - \mu) \right] + (a-1) \log(\mu) + (b-1) \log(1-\mu)
 $$
 
-Distributing the sum, pull logs out front:
-
-$$
-... \propto \sum_{j=1}^J m
-$$
-
-$$
-\mu(a-1) + (b-1)(1-\mu)
-$$
 
 ### 2b)
 
@@ -254,7 +245,13 @@ $$
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary to show the steps to derive the answer.  
+$$
+... \propto J \bar{m} \log(\mu) + (J \bar{N} - J \bar{m}) \log(1-\mu) + (a - 1) \log(\mu) + (b-1) \log(1-\mu)
+$$
+
+$$
+... \propto \left[ J \bar{m} + a - 1 \right] \log(\mu) + (J \bar{N} - J \bar{m} + b - 1) \log(1-\mu)
+$$
 
 ### 2c)
 
@@ -266,9 +263,19 @@ Your expression in 2b) should look familiar.
 
 #### SOLUTION
 
-What do you think?  
+##### What type of posterior distribution does the unknown "pooled" estimate $\mu$ have?
 
-Add as many equation blocks as you feel are necessary to show the steps to derive the answer.  
+The posterior distribution on the pooled $\mu$ is a **beta** distribution. 
+
+##### Write out the formulas for the posterior or updated hyperparameters for your specified posterior distribution.
+
+$$
+a_{new} = a + J\bar{m}
+$$
+
+$$
+b_{new} = b + (J \bar{N} - J \bar{m})
+$$
 
 ### 2d)
 
@@ -278,8 +285,18 @@ You will still assume a vague prior and thus use $a=b=0.5$ as you did in Problem
 
 #### SOLUTION
 
-```{r, solution_02d, eval=FALSE}
-post_df_focus_pooled <- 
+```{r, solution_02d}
+nbar <- mean(df_focus$num_trials)
+mbar <- mean(df_focus$num_events)
+J <- nrow(df_focus)
+
+post_df_focus_pooled <- df_focus %>%
+  mutate(
+    anew = 0.5 + J * mbar,
+    bnew = 0.5 + (J*nbar - J*mbar)
+  )
+
+post_df_focus_pooled %>% head
 ```
 
 ### 2e)
@@ -288,8 +305,15 @@ post_df_focus_pooled <-
 
 #### SOLUTION
 
-```{r, solution_02e, eval=FALSE}
-summary_post_df_focus_pooled <- 
+```{r, solution_02e}
+summary_post_df_focus_pooled <- post_df_focus_pooled %>%
+  mutate(
+    post_avg = anew / (anew + bnew),
+    post_q05 = qbeta(.05, anew, bnew),
+    post_q95 = qbeta(.95, anew, bnew)
+  )
+
+summary_post_df_focus_pooled
 ```
 
 ### 2f)
@@ -301,7 +325,10 @@ summary_post_df_focus_pooled <-
 #### SOLUTION
 
 ```{r, solution_02f}
-###
+summary_post_df_focus_pooled %>%
+  ggplot(mapping = aes(x = as.factor(player_id))) + 
+  geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
+  geom_point(mapping = aes(y = post_avg)) 
 ```
 
 What do you think?  
@@ -587,7 +614,7 @@ post_df_focus_empbayes <- df_focus %>%
 
 #### SOLUTION
 
-```{r, solution_04b, eval=FALSE}
+```{r, solution_04b}
 summary_post_df_focus_empbayes <- post_df_focus_empbayes %>% 
   mutate(
     post_avg = anew / (anew + bnew),
@@ -669,8 +696,8 @@ In this solution, I'm also adding the posterior MLE for use in a later problem.
 summary_post_df_all_empbayes <- post_df_all_empbayes %>%
   mutate(
     post_avg = anew / (anew + bnew),
-    post_q05 = dbeta(.05, anew, bnew),
-    post_q95 = dbeta(.95, anew, bnew),
+    post_q05 = qbeta(.05, anew, bnew),
+    post_q95 = qbeta(.95, anew, bnew),
     post_mle = (anew - 1) / (anew + bnew - 2)
   )
 
@@ -711,8 +738,6 @@ summary_post_df_all_empbayes %>%
 
 #### SOLUTION
 
-**INCOMPLETE: could use more detail**
-
 When the sample size is small, the informative prior influences the the posterior distribution quite heavily. When the sample size is large, the informative prior is less influential on the posterior distribution, and the observed data is more influential. We can observe this in the plot from `4g`, where we see that low numbers of trials result in a large range of uncertainty, representing the uncertainty of the prior. In contrast, high numbers of trials have lower uncertainty as we begin to approximate the true value more accurately.
 
 ## Problem 05
@@ -744,7 +769,7 @@ post_player_eval %>% head
 ```{r, solution_05b}
 post_player_eval_top10 <- post_player_eval %>%
   arrange(desc(prob_grt_67)) %>%
-  top_n(10)
+  top_n(10, prob_grt_67)
 
 post_player_eval_top10
 ```
