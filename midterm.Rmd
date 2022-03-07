@@ -274,7 +274,7 @@ a_{new} = a + J\bar{m}
 $$
 
 $$
-b_{new} = b + (J \bar{N} - J \bar{m})
+b_{new} = b + (J \bar{N} - J \bar{m}) = b + J(\bar{N} - \bar{m})
 $$
 
 ### 2d)
@@ -293,7 +293,7 @@ J <- nrow(df_focus)
 post_df_focus_pooled <- df_focus %>%
   mutate(
     anew = 0.5 + J * mbar,
-    bnew = 0.5 + (J*nbar - J*mbar)
+    bnew = 0.5 + J * (nbar - mbar)
   )
 
 post_df_focus_pooled %>% head
@@ -324,14 +324,19 @@ summary_post_df_focus_pooled
 
 #### SOLUTION
 
+##### Plot
+
 ```{r, solution_02f}
 summary_post_df_focus_pooled %>%
   ggplot(mapping = aes(x = as.factor(player_id))) + 
   geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
-  geom_point(mapping = aes(y = post_avg)) 
+  geom_point(mapping = aes(y = post_avg)) + 
+  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), color = "red", shape = "square")
 ```
 
-What do you think?  
+##### Are there players with MLEs that are outside the posterior uncertainty interval? Are there players with posterior mean values that are quite close to the MLEs?
+
+Because we're using a pooled estimate, all players have the same MLE, which is in (or very close to) the center of the uncertainty interval. Thus, no players have an MLE outside the interval.
 
 ### 2g)
 
@@ -341,7 +346,7 @@ Your visualization in Problem 2f) should not "feel right". Something should seem
 
 #### SOLUTION
 
-What do you think?  
+The visualization demonstrates the assumption that all players have the same likelihood function to catch a pass given a target. If you watched Cooper Kupp and any of the Giants' receivers this season, you probably know that this is not true. Evidence suggests Kupp's hands are magnetized, while Giants' wideouts may need to schedule eye exams. Thus, a single likelihood function for all players seems inappropriate.
 
 ## Problem 03
 
@@ -457,7 +462,7 @@ my_beta_loglik <- function(unknowns, my_info)
   
   # calculate the log-likelihood for all observations
   # Log-likelihood function is a logarithmic transformation of the likelihood function
-  log_lik <- log(pbeta(my_info$theta, a, b))
+  log_lik <- sum(dbeta(my_info$theta, a, b, log = TRUE))
   
   # account for the change of variables
   log_lik
@@ -489,26 +494,46 @@ You will now identify the maximum likelihood estimates for $a$ and $b$. You shou
 
 #### SOLUTION
 
-Set the initial guesses.  
+##### Set the initial guesses.  
 
-```{r, solution_03e, eval=FALSE}
-init_guess_01 <- 
-init_guess_02 <- 
+```{r, solution_03e}
+init_guess_01 <- c(0, 0)
+init_guess_02 <- c(-1, -1)
 ```
 
-Perform the optimization using the first starting guess.  
+##### Perform the optimization using the first starting guess.  
 
-```{r, solution_03e_b, eval=FALSE}
-log_ab_res_01 <- optim( )
+```{r, solution_03e_b}
+log_ab_res_01 <- optim( 
+    par = init_guess_01,
+    fn = my_beta_loglik, 
+    my_info = info_for_ab,
+    gr = NULL,
+    method = "BFGS",
+    control = list(fnscale = -1)
+  )
+
+log_ab_res_01
 ```
 
-Perform the optimization using the second starting guess.  
+##### Perform the optimization using the second starting guess.  
 
-```{r, solution_03e_c, eval=FALSE}
-log_ab_res_02 <- optim( )
+```{r, solution_03e_c}
+log_ab_res_02 <- optim( 
+    par = init_guess_02,
+    fn = my_beta_loglik, 
+    my_info = info_for_ab,
+    gr = NULL,
+    method = "BFGS",
+    control = list(fnscale = -1)
+  )
+
+log_ab_res_02
 ```
 
-**Are the identified log-transformed estimates the same?**  
+##### Are the identified log-transformed estimates the same?
+
+Yes, they are. This suggests that the posterior likelihood is unimodal.
 
 ### 3f)
 
@@ -776,7 +801,7 @@ post_player_eval_top10
 
 ##### What do these players all have in common, besides the `prob_grt_67` value?
 
-All players have a high number of targets. The fewest number targets among these 10 players is around 120.
+All players have a high number of targets. The mean number of trials for all players is `r mean(post_player_eval$num_trials)`; the fewest number targets among these 10 players is around 120.
 
 ### 5c)
 
@@ -785,7 +810,7 @@ All players have a high number of targets. The fewest number targets among these
 #### SOLUTION
 
 ```{r, solution_05c}
-post_player_eval_top10$num_trials %>% min()
+min(post_player_eval_top10$num_trials)
 ```
 
 
@@ -799,8 +824,9 @@ A player with a large sample size could mean that player is well known, especial
 
 ```{r, solution_05d}
 post_player_eval %>%
-  arrange(num_trials, desc(prob_grt_67)) %>%
-  top_n(10)
+  filter(prob_grt_67 > .75) %>%
+  arrange(num_trials) %>%
+  head(10)
 ```
 
 
@@ -812,4 +838,7 @@ post_player_eval %>%
 
 #### SOLUTION
 
-What do you think?  
+```{r}
+mean(post_player_eval$num_trials)
+```
+
