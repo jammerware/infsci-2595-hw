@@ -3,9 +3,7 @@ title: "INFSCI 2595 Spring 2022 - MIDTERM"
 subtitle: "Assigned February 28, 2022; Due: March 8, 2022"
 author: "Ben Stein"
 date: "Submission time: March 8, 2022 at 11:00PM EST"
-output: 
-  html_document:
-    toc: true
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -338,7 +336,7 @@ summary_post_df_focus_pooled %>%
   ggplot(mapping = aes(x = as.factor(player_id))) + 
   geom_linerange(mapping = aes(ymin = post_q05, ymax = post_q95)) + 
   geom_point(mapping = aes(y = post_avg)) + 
-  geom_point(mapping = aes(y = (anew - 1) / (anew + bnew - 2)), color = "red", shape = "square")
+  plot_post_mle(anew, bnew)
 ```
 
 ##### Are there players with MLEs that are outside the posterior uncertainty interval? Are there players with posterior mean values that are quite close to the MLEs?
@@ -468,11 +466,10 @@ my_beta_loglik <- function(unknowns, my_info)
   b <- exp(b)
   
   # calculate the log-likelihood for all observations
-  # Log-likelihood function is a logarithmic transformation of the likelihood function
   log_lik <- sum(dbeta(my_info$theta, a, b, log = TRUE))
   
   # account for the change of variables
-  log(log_lik)
+  exp(log_lik)
 }
 ```
 
@@ -540,7 +537,7 @@ log_ab_res_02
 
 ##### Are the identified log-transformed estimates the same?
 
-Yes, they are. This suggests that the posterior likelihood is unimodal.
+Yes, they are. This suggests that the posterior likelihood is unimodal. (Mine don't converge to the same thing because my `my_beta_loglik` is incorrect, but that's the best I can do.)
 
 ### 3f)
 
@@ -548,23 +545,28 @@ The optimal parameters in the Problem 3e) are in the log-transformed space.
 
 **You must back-transform them to calculate the estimates for the prior $a$ and $b$ shape hyperparameters. Assign the back-transformed parameters to `ab_emp_bayes`.**  
 
-**How many a-priori trials does your estimated hyperparameters represent?**  
-
 #### SOLUTION
+
+**My solution to this and the following problems uses the given shape parameters from `3g` rather than the derived ones, because I'm still figuring those out. I may update them to the correct values if I get there in time.**
+
 
 ##### Back-transformation
 
-**unanswered**
+Note that this is incorrect because my `my_beta_loglik` function is incorrect, but the backtransformation process should be right.
 
-**My solution to this and the following problems uses the given shape parameters from `3g` rather than the derived ones, because I'm still figuring those out. I may update them to the correct values if I get there in time.**
+```{r}
+ab_emp_bayes <- exp(log_ab_res_02$par)
+```
+
+Instead, I'm assigning the given values from **3g**.
 
 ```{r, solution_03f}
 ab_emp_bayes <- list(a = 13, b = 8)
 ```
 
-##### How many a-priori trials?  
+##### How many a-priori trials does your estimated hyperparameters represent?
 
-**unanswered**
+I'm assuming the shape parameters from 3g to answer this question, because my estimated ones are wrong. Assuming $a = 13, b = 8$, it represents **21 a priori trials**.
 
 ### 3g)
 
@@ -845,7 +847,5 @@ post_player_eval %>%
 
 #### SOLUTION
 
-```{r}
-mean(post_player_eval$num_trials)
-```
+The pooled estimate is the estimation of the unknown average for all players, which appears to be a normal distribution as long as players have a certain number of targets. Therefore, asking about players with catch rate greater than .67 corresponds to players who have a catch rate at least one standard deviation above the mean.
 
