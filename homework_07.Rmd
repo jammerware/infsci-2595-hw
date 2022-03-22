@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 07"
 subtitle: "Assigned March 16, 2022; Due: March 23, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: March 23, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.
 
 ## Overview
 
@@ -63,7 +63,7 @@ train_01 <- readr::read_csv(url_01, col_names = TRUE)
 
 As shown by the glimpse in the code chunk below there are `r nrow(train_01)` observations of the `r ncol(train_01)` continuous variables.  
 
-```{r, show_glimpse_01, eval=TRUE}
+```{r, show_glimpse_01}
 train_01 %>% glimpse()
 ```
 
@@ -73,14 +73,22 @@ train_01 %>% glimpse()
 
 #### SOLUTION
 
+##### Plot
+
 ```{r, solution_01a}
-###
+train_01 %>%
+  ggplot(mapping = aes(x = x, y = y)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", formula = y ~ x)
 ```
 
+##### Relationship between the response and the input
+
+Based on the figure, the response appears to be linearly related to the input with a negative slope.
 
 ### 1b)
 
-In your response to Problem 1a), you should see a "best fit line" and it's associated confidence interval displayed with the scatter plot. Behind the scenes, `ggplot2()` fits a linear model between the response and the input with Maximum Likelihood Estimation, and plots the result on the figure. You will now work through a full Bayesian linear model. Before coding the log-posterior function, you will start out by creating the list of required information, `info_01`, which defines the data and hyperparameters that you will ultimately pass into the log-posterior function.  
+In your response to Problem 1a), you should see a "best fit line" and its associated confidence interval displayed with the scatter plot. Behind the scenes, `ggplot2()` fits a linear model between the response and the input with Maximum Likelihood Estimation, and plots the result on the figure. You will now work through a full Bayesian linear model. Before coding the log-posterior function, you will start out by creating the list of required information, `info_01`, which defines the data and hyperparameters that you will ultimately pass into the log-posterior function.  
 
 You will need to create a design matrix assuming a linear relationship between the input and the response. The mean trend function is written for you below:  
 
@@ -92,15 +100,15 @@ $$
 
 #### SOLUTION
 
-```{r, solution_01b, eval=FALSE}
-Xmat_01 <- 
+```{r, solution_01b}
+Xmat_01 <- model.matrix(y ~ x, data = train_01)
 
 info_01 <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  yobs = train_01$y,
+  design_matrix = Xmat_01,
+  mu_beta = 0,
+  tau_beta = 5,
+  sigma_rate = 1
 )
 ```
 
@@ -118,57 +126,72 @@ The comments in the code chunk below tell you what you need to fill in. The unkn
 
 #### SOLUTION
 
-```{r, solution_01c, eval=FALSE}
+```{r, solution_01c}
 lm_logpost <- function(unknowns, my_info)
 {
   # specify the number of unknown beta parameters
-  length_beta <- 
+  length_beta <- 2
   
   # extract the beta parameters from the `unknowns` vector
-  beta_v <- 
+  beta_v <- unknowns[1:length_beta]
   
   # extract the unbounded noise parameter, varphi
-  lik_varphi <- 
+  lik_varphi <- unknowns[length_beta + 1]
   
   # back-transform from varphi to sigma
-  lik_sigma <- 
+  lik_sigma <- exp(lik_varphi)
   
   # extract design matrix
-  X <- 
+  X <- my_info$design_matrix
   
   # calculate the linear predictor
-  mu <- 
+  mu <- X %*% as.matrix(beta_v)
   
   # evaluate the log-likelihood
-  log_lik <- 
+  log_lik <- sum(dnorm(
+    x = my_info$yobs,
+    mean = mu,
+    sd = lik_sigma,
+    log = TRUE
+  ))
   
   # evaluate the log-prior
-  log_prior_beta <- 
+  log_prior_beta <- sum(dnorm(
+    x = beta_v,
+    mean = my_info$mu_beta,
+    sd = my_info$tau_beta,
+    log = TRUE
+  ))
   
-  log_prior_sigma <- 
+  log_prior_sigma <- dexp(
+    x = lik_sigma,
+    rate = my_info$sigma_rate,
+    log = TRUE
+  )  
   
   # add the mean trend prior and noise prior together
-  log_prior <- 
+  log_prior <- log_prior_beta + log_prior_sigma
   
   # account for the transformation
-  log_derive_adjust <- 
+  log_derive_adjust <- lik_varphi
   
   # sum together
-  
+  log_lik + log_prior + log_derive_adjust
 }
 ```
 
 Test out `lm_logpost()` with guess values of -1 for all parameters.  
 
 ```{r, solution_01c_c}
-###
+lm_logpost(c(-1, -1, -1), my_info = info_01)
 ```
 
 
 Test out `lm_logpost()` with guess values of 1 for all parameters.  
 
 ```{r, solution_01c_b}
-###
+
+lm_logpost(c(1, 1, 1), my_info = info_01)
 ```
 
 ### 1d)
@@ -179,43 +202,52 @@ The `my_laplace()` function is started for you in the code chunk below. You must
 
 #### SOLUTION
 
-```{r, solution_01d, eval=FALSE}
+```{r, solution_01d}
 my_laplace <- function(start_guess, logpost_func, ...)
 {
   # code adapted from the `LearnBayes`` function `laplace()`
-  fit <- optim(start_guess,
-               logpost_func,
-               gr = NULL,
-               ...,
-               method = "BFGS",
-               hessian = TRUE,
-               control = list(fnscale = -1, maxit = 1001))
+  fit <- optim(
+    start_guess,
+    logpost_func,
+    gr = NULL,
+    my_info = info_01,
+    method = "BFGS",
+    hessian = TRUE,
+    control = list(fnscale = -1, maxit = 1001)
+  )
   
-  mode <- 
-  post_var_matrix <- 
+  mode <- fit$par
+  post_var_matrix <- -solve(fit$hessian)
   p <- length(mode) # number of unknown parameters
-  int <- 
+  int <- p / 2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, info_01)
+
   # package all of the results into a list
-  list(mode = mode,
-       var_matrix = post_var_matrix,
-       log_evidence = int,
-       converge = ifelse(fit$convergence == 0,
-                         "YES", 
-                         "NO"),
-       iter_counts = as.numeric(fit$counts[1]))
+  list(
+    mode = mode,
+    var_matrix = post_var_matrix,
+    log_evidence = int,
+    converge = ifelse(
+      fit$convergence == 0,
+      "YES",
+      "NO"),
+    iter_counts = as.numeric(fit$counts[1])
+  )
 }
 ```
 
 Fit the Bayesian linear model.  
 
-```{r, solution_01d_b, eval=FALSE}
-laplace_01 <- 
+```{r, solution_01d_b}
+laplace_01 <- my_laplace(c(0, 0, 0), lm_logpost)
 ```
 
 Display the posterior mode and posterior standard deviations.  
 
 ```{r, solution_01d_c}
-###
+print("Posterior mode:")
+print(laplace_01$mode)
+print("Posterior SDs")
+print(sqrt(diag(laplace_01$var_matrix)))
 ```
 
 ### 1e)
@@ -228,31 +260,39 @@ After completing the function, generate 2500 posterior samples of the parameters
 
 #### SOLUTION
 
-```{r, solution_01e, eval=FALSE}
+```{r, solution_01e}
 generate_lm_post_samples <- function(mvn_result, length_beta, num_samples)
 {
-  MASS::mvrnorm(n = num_samples,
-                mu = mvn_result$ ,
-                Sigma = mvn_result$ ) %>% 
+  MASS::mvrnorm(
+    n = num_samples,
+    mu = mvn_result$mode,
+    Sigma = mvn_result$var_matrix) %>% 
     as.data.frame() %>% tibble::as_tibble() %>% 
-    purrr::set_names(c(sprintf("beta_%02d", 0:(length_beta-1)), "varphi")) %>% 
-    mutate(sigma =  )
+    purrr::set_names(nm = c(sprintf("beta_%02d", 0:(length_beta-1)), "varphi")) %>% 
+    mutate(sigma =  exp(varphi))
 }
 ```
 
 Generate posterior samples.  
 
-```{r, solution_01e_b, eval=FALSE}
+```{r, solution_01e_b}
 set.seed(87123)
-post_samples_01 <- 
+post_samples_01 <- generate_lm_post_samples(laplace_01, 2, 2500)
 ```
 
 Create the posterior histogram on $\beta_1$ and calculate the probability that $\beta_1$ is greater than zero.  
 
 ```{r, solution_01e_c}
-###
+post_samples_01 %>%
+  ggplot() + 
+  geom_histogram(mapping = aes(x = beta_01), bins = 55)
 ```
+##### Probability that beta 1 > 0
 
+```{r}
+mean(post_samples_01$beta_01 > 0)
+```
+The probability that $\beta_1 > 0$ is *0*.
 
 ## Problem 02
 
@@ -270,7 +310,7 @@ The `post_lm_pred_samples()` returns the `Umat` and `Ymat` matrices contained wi
 
 #### SOLUTION
 
-```{r, solution_02a, eval=FALSE}
+```{r, solution_02a}
 post_lm_pred_samples <- function(Xnew, Bmat, sigma_vector)
 {
   # number of new prediction locations
@@ -279,17 +319,17 @@ post_lm_pred_samples <- function(Xnew, Bmat, sigma_vector)
   S <- nrow(Bmat)
   
   # matrix of linear predictors
-  Umat <- 
+  Umat <- Xnew %*% t(Bmat)
   
-  # assmeble matrix of sigma samples, set the number of rows
-  Rmat <- matrix(rep(sigma_vector, M), , byrow = TRUE)
+  # assemble matrix of sigma samples, set the number of rows
+  Rmat <- matrix(rep(sigma_vector, M), M, byrow = TRUE)
   
   # generate standard normal and assemble into matrix
   # set the number of rows
-  Zmat <- matrix(rnorm(M*S), , byrow = TRUE)
+  Zmat <- matrix(rnorm(M*S), M, byrow = TRUE)
   
   # calculate the random observation predictions
-  Ymat <- 
+  Ymat <- Umat + Rmat * Zmat
   
   # package together
   list(Umat = Umat, Ymat = Ymat)
@@ -319,23 +359,30 @@ You now have enough pieces in place to generate posterior predictions from your 
 
 #### SOLUTION
 
+##### Predictions
+
 Make posterior predictions on the training set.  
 
-```{r, solution_02b, eval=FALSE}
-post_pred_samples_01 <- 
+```{r, solution_02b}
+post_pred_samples_01 <- make_post_lm_pred(Xmat_01, post_samples_01) 
 ```
+
+##### Dimensions and relationships
 
 The dimensionality of the posterior predicted mean trend matrix is:  
 
-```{r, solution_02b_b, eval=FALSE}
-### 
+```{r, solution_02b_b}
+dim(post_pred_samples_01$Umat)
 ```
 
 The dimensionality of the posterior predicted response matrix is:  
 
-```{r, solution_02b_c, eval=FALSE}
-### 
+```{r, solution_02b_c}
+dim(post_pred_samples_01$Ymat)
 ```
+##### Do the columns correspond to the number of prediction points?
+
+Yes - the number of columns is 2500, which is the number of posterior samples used for prediction.
 
 ### 2c)
 
@@ -347,20 +394,24 @@ You will now use the model predictions to calculate the error between the model 
 
 #### SOLUTION
 
+##### Error calculation
+
 The error between the first 3 posterior predicted mean trend samples and the training set observations are calculated below.  
 
-```{r, solution_02c, eval=FALSE}
+```{r, solution_02c}
 ### error of the first posterior sample
-error_01_post_01 <- 
+error_01_post_01 <- post_pred_samples_01$Umat[1] - train_01$y[1]
 
 ### error of the second posterior sample
-error_01_post_02 <- 
+error_01_post_02 <- post_pred_samples_01$Umat[2] - train_01$y[2]
 
 ### error of the third posterior sample
-error_01_post_03 <- 
+error_01_post_03 <- post_pred_samples_01$Umat[3] - train_01$y[3]
 ```
 
-?  
+##### Why consider use the mean trend rather than the predicted response when evaluating the error with the observed response?
+
+We do this because we're focused on how well the model approximates the non-stochastic portion of the uncertainty (specifically, uncertainty in the estimate of the coefficients, not uncertainty in the unknown standard deviation).
 
 ### 2d)
 
@@ -372,10 +423,10 @@ You will now calculate the Mean Absolute Error (MAE) associated with each of the
 
 #### SOLUTION
 
-?  
+##### Length of the vector
 
 ```{r, solution_02d}
-###
+length(error_01_post_01)
 ```
 
 
