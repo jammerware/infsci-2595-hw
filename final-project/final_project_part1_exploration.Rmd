@@ -1,0 +1,153 @@
+---
+title: "INFSCI 2595 Final, Part 1a: Exploration (Distribution & Counts)"
+author: "Ben Stein"
+date: "3/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I examine the distributions and counts of the variables in the dataset supplied for the final project.
+
+# Setup
+
+## Libraries
+
+```{r}
+library(tidyverse)
+```
+
+## Data
+
+```{r}
+df_raw <- readr::read_csv("./final_project_train.csv", col_names = TRUE)
+```
+
+## Cleaning
+
+```{r}
+df <- df_raw %>%
+  mutate_if(is.character, as.factor)
+```
+
+# Distributions and counts
+
+## Predictors: categorical (`region` and `customer`)
+
+```{r}
+df_clean %>% 
+  select(where(is.factor), -outcome) %>%
+  summary()
+```
+
+```{r, warning=FALSE}
+df_clean %>%
+  select(where(is.factor), -outcome) %>%
+  pivot_longer(cols = everything()) %>%
+  ggplot(mapping = aes(x = value)) +
+  geom_histogram(stat = "count") +
+  facet_wrap(~name, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+From this, we can see that `Other` is by far the most common category for customers.The three regions present in the dataset occur on roughly the same scale, but region `ZZ` is the most common.
+
+## Continuous predictors (all sentiment-related variables)
+
+Because there are many (`r df %>% select(where(is.numeric))`, to be exact) continuous predictors, let's examine their distributions in qualitative groups (i.e. grouped by the methods by which they are derived). Let's put together a quick function so we can easily visualizes different groups of predictors:
+
+```{r}
+visualize_distributions <- function(x, column_name_start) {
+  x %>%
+    select(starts_with(column_name_start)) %>%
+    pivot_longer(cols = everything()) %>%
+    ggplot(mapping = aes(x = value)) +
+    geom_histogram(bins = 50) +
+    facet_wrap(~name, scales = "free") + 
+    theme_bw() +
+    theme(axis.text.y = element_blank())
+}
+```
+
+### Lexicon: Bing
+
+```{r}
+df %>% visualize_distributions("xb_")
+```
+
+The figure suggests that most of the Bing lexicon features have approximately Gaussian distribution, though some seem slightly less so (e.g. `xb_05`, `xb_07`, `xb_08`).
+
+### Lexicon: NRC
+
+```{r}
+df %>% visualize_distributions("xn_")
+```
+
+Similar to the Bing lexicon features, the NRC lexicon features are roughly Gaussian with some possible exceptions (e.g. `xn_07`, and `xn_06` seems slightly right-tailed).
+
+### Lexicon: AFINN
+
+```{r}
+df %>% visualize_distributions("xa_")
+```
+
+The AFINN lexicon features appear Gaussian, though `xa_06` seems right-tailed.
+
+### Word-count features
+
+```{r}
+df %>% visualize_distributions("xw_")
+```
+
+Only one of the word-count-based features appears Gaussian (`xw_01`). `xw_02`seems right-tailed, while `xw_03` seems left-tailed.
+
+### `sentimentr` features
+
+```{r}
+df %>% visualize_distributions("xs_")
+```
+
+## Outcome/response variables
+
+We'll ultimately treat these variables as our prediction targets in regression and classification.
+
+### Outcome
+
+The `outcome` is a binary variable which describes whether a given product failed to meet its sales goal (i.e. a value of `"event"` indicates that it **did not** meet its sales goal).
+
+```{r}
+df$outcome %>% summary
+```
+
+The `event` outcome seems relatively rare (127 times out of `r 127+550` trials, or with about **`r round(127 / (127+550), 3)`** probability).
+
+### Response
+
+The `response` variable is continuous describes the number of hours per week are associated with a product being sold to a customer.
+
+```{r}
+df %>%
+  ggplot(mapping = aes(x = response)) +
+  geom_histogram(bins = 50)
+```
+
+`response` is heavily right-tailed. We can understand this quantitatively by looking at summary distribution statistics.
+
+```{r}
+df %>%
+  select(response) %>%
+  summary()
+```
+
+This suggests that (independent of the assignment requirements), we probably want to log-transform the variable when modeling. After log transformation, we can see that the distribution appears more normal.
+
+```{r}
+df %>%
+  ggplot(mapping = aes(x = log(response))) +
+  geom_histogram(bins = 50)
+```
