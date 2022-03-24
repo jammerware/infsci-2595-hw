@@ -130,7 +130,7 @@ The comments in the code chunk below tell you what you need to fill in. The unkn
 lm_logpost <- function(unknowns, my_info)
 {
   # specify the number of unknown beta parameters
-  length_beta <- 2
+  length_beta <- length(unknowns) - 1
   
   # extract the beta parameters from the `unknowns` vector
   beta_v <- unknowns[1:length_beta]
@@ -145,6 +145,7 @@ lm_logpost <- function(unknowns, my_info)
   X <- my_info$design_matrix
   
   # calculate the linear predictor
+  beta <- as.matrix(beta_v)
   mu <- X %*% as.matrix(beta_v)
   
   # evaluate the log-likelihood
@@ -210,7 +211,7 @@ my_laplace <- function(start_guess, logpost_func, ...)
     start_guess,
     logpost_func,
     gr = NULL,
-    my_info = info_01,
+    ...,
     method = "BFGS",
     hessian = TRUE,
     control = list(fnscale = -1, maxit = 1001)
@@ -219,7 +220,8 @@ my_laplace <- function(start_guess, logpost_func, ...)
   mode <- fit$par
   post_var_matrix <- -solve(fit$hessian)
   p <- length(mode) # number of unknown parameters
-  int <- p / 2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, info_01)
+  
+  int <- p / 2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, ...)
 
   # package all of the results into a list
   list(
@@ -238,7 +240,7 @@ my_laplace <- function(start_guess, logpost_func, ...)
 Fit the Bayesian linear model.  
 
 ```{r, solution_01d_b}
-laplace_01 <- my_laplace(c(0, 0, 0), lm_logpost)
+laplace_01 <- my_laplace(c(0, 0, 0), lm_logpost, info_01)
 ```
 
 Display the posterior mode and posterior standard deviations.  
@@ -287,12 +289,13 @@ post_samples_01 %>%
   ggplot() + 
   geom_histogram(mapping = aes(x = beta_01), bins = 55)
 ```
+
 ##### Probability that beta 1 > 0
 
 ```{r}
 mean(post_samples_01$beta_01 > 0)
 ```
-The probability that $\beta_1 > 0$ is *0*.
+The probability that $\beta_1 > 0$ is *`r mean(post_samples_01$beta_01 > 0)``*.
 
 ## Problem 02
 
@@ -380,6 +383,7 @@ The dimensionality of the posterior predicted response matrix is:
 ```{r, solution_02b_c}
 dim(post_pred_samples_01$Ymat)
 ```
+
 ##### Do the columns correspond to the number of prediction points?
 
 Yes - the number of columns is 2500, which is the number of posterior samples used for prediction.
@@ -400,18 +404,18 @@ The error between the first 3 posterior predicted mean trend samples and the tra
 
 ```{r, solution_02c}
 ### error of the first posterior sample
-error_01_post_01 <- post_pred_samples_01$Umat[1] - train_01$y[1]
+error_01_post_01 <- post_pred_samples_01$Umat[,1] - train_01$y
 
 ### error of the second posterior sample
-error_01_post_02 <- post_pred_samples_01$Umat[2] - train_01$y[2]
+error_01_post_02 <- post_pred_samples_01$Umat[,2] - train_01$y
 
 ### error of the third posterior sample
-error_01_post_03 <- post_pred_samples_01$Umat[3] - train_01$y[3]
+error_01_post_03 <- post_pred_samples_01$Umat[,3] - train_01$y
 ```
 
 ##### Why consider use the mean trend rather than the predicted response when evaluating the error with the observed response?
 
-We do this because we're focused on how well the model approximates the non-stochastic portion of the uncertainty (specifically, uncertainty in the estimate of the coefficients, not uncertainty in the unknown standard deviation).
+We do this because we're focused on how well the model approximates the deterministic portion of the uncertainty (specifically, uncertainty in the estimate of the coefficients, not uncertainty in the unknown standard deviation).
 
 ### 2d)
 
@@ -429,18 +433,23 @@ You will now calculate the Mean Absolute Error (MAE) associated with each of the
 length(error_01_post_01)
 ```
 
-
 Now calculate the MAE associated with each of the first three posterior samples.  
 
-```{r, solution_02d_b, eval=FALSE}
-mae_01_post_01 <- 
+```{r, solution_02d_b}
+mae_01_post_01 <- mean(abs(error_01_post_01))
 
-mae_01_post_02 <- 
+mae_01_post_02 <- mean(abs(error_01_post_02))
 
-mae_01_post_03 <- 
+mae_01_post_03 <- mean(abs(error_01_post_03))
 ```
 
-?  
+##### What are you averaging over when you calculate the mean absolute error?
+
+We're averaging over the difference between what the model predicts and the observed value of `y`. That is, given a posterior sample of coefficients, what is the absolute distance between the value they predict and the observed value?
+
+##### Are the three MAE values the same? If not, why would they be different?
+
+They are different, but this isn't surprising - due to the noise, the model predicts some values of x better than others.
 
 ### 2e)
 
@@ -467,12 +476,11 @@ You will use this fact to calculate the error associated with each training poin
 
 #### SOLUTION
 
-?  
-
-```{r, solution_02e, eval=FALSE}
-absE01mat <- 
+```{r, solution_02e}
+absE01mat <- post_pred_samples_01 - train_01
 
 ### dimensions?
+dim(absE01mat)
 ```
 
 
@@ -484,21 +492,25 @@ You must now summarize the absolute value errors by averaging them appropriately
 
 #### SOLUTION
 
-?  
-
-```{r, solution_02f, eval=FALSE}
-MAE_01 <- 
+```{r, solution_02f}
+MAE_01 <- abs(colMeans(absE01mat))
 
 ### data type?
+class(MAE_01)
 
 ### length?
+length(MAE_01)
 ```
 
 Check with the results you calculated previously.  
 
-```{r, solution_02f_b, eval=FALSE}
-### your code here
+```{r, solution_02f_b}
+MAE_01[1]
+MAE_01[2]
+MAE_01[3]
 ```
+
+These results are consistent with the findings from **2b.**
 
 ### 2g)
 
@@ -508,19 +520,23 @@ You have calculated the MAE associated with each posterior sample, and thus repr
 
 #### SOLUTION
 
+##### Quantiles
+
 Calculate the quantiles of the MAE below.  
 
-```{r, solution_02g, eval=FALSE}
-### 
+```{r, solution_02g}
+quantile(MAE_01)
 ```
 
-?  
+##### Why is the MAE uncertain? Or put another way, what causes the MAE to be uncertain?
+
+The MAE is uncertain because we're only calculating error with respect to the deterministic portion of the model. We're not accounting for the noise in the unknown standard deviation.
 
 ## Problem 03
 
 You will now make use of the model fitting and prediction functions you created in the previous problems to study the behavior of a more complicated non-linear modeling task. The code chunk below reads in two data sets. Both consist of two continuous variables, an input `x` and a response `y`. The first, `train_02`, will serve as the training set, and the second, `test_02`, will serve as a hold-out test set. You will only fit models based on the training set.  
 
-```{r, read_in_train_test_02, eval=TRUE}
+```{r, read_in_train_test_02}
 url_02_train <- "https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/07/train_02.csv"
 
 train_02 <- readr::read_csv(url_02_train, col_names = TRUE)
@@ -540,7 +556,9 @@ It's always a good idea to start out by visualizing the data before modeling.
 #### SOLUTION
 
 ```{r solution_03a}
-###
+ggplot() +
+  geom_point(data = train_02, mapping = aes(x = x, y = y), color = "red") + 
+  geom_point(data = test_02, mapping = aes(x = x, y = y), color = "blue", shape = "square")
 ```
 
 ### 3b)
@@ -561,16 +579,13 @@ The fifth code chunk below prints the dimensionality of the 1st and 2nd order sp
 
 Define the `make_spline_basis_mats()` function.  
 
-```{r, solution_03b, eval=FALSE}
+```{r, solution_03b}
 make_spline_basis_mats <- function(J, train_data, test_data)
 {
-  train_basis <- splines::ns( )
-  
+  train_basis <- splines::ns(train_data$x, df = J)
   knots_use_basis <- as.vector(attributes(train_basis)$knots)
-  
-  train_matrix <- model.matrix( )
-  
-  test_matrix <- model.matrix( )
+  train_matrix <- model.matrix(y ~ splines::ns(x, knots = knots_use_basis), data = train_data)
+  test_matrix <- model.matrix(y ~ splines::ns(x, knots = knots_use_basis), data = test_data)
   
   tibble::tibble(
     design_matrix = list(train_matrix),
@@ -581,28 +596,29 @@ make_spline_basis_mats <- function(J, train_data, test_data)
 
 Create each of the training and test basis matrices.  
 
-```{r, solution_03b_b, eval=FALSE}
-spline_matrices <- purrr::map_dfr(seq(1, 50, by = 2), 
-                                  make_spline_basis_mats,
-                                  train_data = train_02, 
-                                  test_data = test_02)
+```{r, solution_03b_b}
+spline_matrices <- purrr::map_dfr(
+  seq(1, 50, by = 2), 
+  make_spline_basis_mats,
+  train_data = train_02, 
+  test_data = test_02)
 ```
 
 Get a glimpse of the structure of `spline_matrices`.  
 
-```{r, solution_03b_c, eval=FALSE}
+```{r, solution_03b_c}
 glimpse(spline_matrices)
 ```
 
 Display the elements of `spline_matrices` to the screen.  
 
-```{r, solution_03b_d, eval=FALSE}
+```{r, solution_03b_d}
 spline_matrices
 ```
 
 The code chunk below is created for you. It shows how to check the dimensions of several training and test matrices.  
 
-```{r, solution_03b_e, eval=FALSE}
+```{r, solution_03b_e}
 dim(spline_matrices$design_matrix[[1]])
 
 dim(spline_matrices$test_matrix[[1]])
@@ -612,7 +628,7 @@ dim(spline_matrices$design_matrix[[2]])
 dim(spline_matrices$test_matrix[[2]])
 ```
 
-?  
+The training matrices have *150* rows, while the test matrices have *50*.
 
 ### 3c)
 
@@ -630,49 +646,57 @@ You will complete both code chunks in order to programmatically train all 25 spl
 
 Assemble the list of required information.  
 
-```{r, solution_03c_a, eval=FALSE}
+```{r, solution_03c_a}
 info_02_train <- list(
-  yobs = ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  yobs = train_02$y,
+  mu_beta = 0,
+  tau_beta = 20,
+  sigma_rate = 1
 )
 ```
 
 Complete the function which manages the execution of the Laplace Approximation to each spline model. Note that `Xtrain` is assumed to be a design matrix in the `manage_spline_fit()` function.  
 
-```{r, solution_03c_b, eval=FALSE}
+```{r, solution_03c_b}
 manage_spline_fit <- function(Xtrain, logpost_func, my_settings)
 {
-  my_settings$design_matrix <- 
+  my_settings$design_matrix <- Xtrain
+    
+  init_beta <- rnorm( 
+    n = ncol(Xtrain),
+    mean = my_settings$mu_beta,
+    sd = my_settings$tau_beta)
   
-  init_beta <- 
+  init_varphi <- log(rexp(1, rate = my_settings$sigma_rate))
   
-  init_varphi <- 
-  
-  my_laplace( )
+  my_laplace(
+    start_guess = c(init_beta, init_varphi),
+    logpost_func = logpost_func,
+    my_settings
+  )
 }
 ```
 
 The next three code chunks are completed for you. All 25 spline models are trained in the first code chunk below. Notice that because the training design matrices have already been created, we just need to loop over each element of `spline_matrices$design_matrix`.
 
-```{r, solution_03c_c, eval=FALSE}
+```{r, solution_03c_c}
 set.seed(724412)
-all_spline_models <- purrr::map(spline_matrices$design_matrix, 
-                                manage_spline_fit,
-                                logpost_func = lm_logpost,
-                                my_settings = info_02_train)
+all_spline_models <- purrr::map(
+  spline_matrices$design_matrix, 
+  manage_spline_fit,
+  logpost_func = lm_logpost,
+  my_settings = info_02_train)
 ```
 
 The code chunk below shows how to access a single model fitting result. Specifically, it extracts the result of the second trained model, the 3 degree of freedom spline.  
 
-```{r, solution_03c_d, eval=FALSE}
+```{r, solution_03c_d}
 all_spline_models[[2]]
 ```
 
 The code chunk below shows how to check that all optimizations converged.  
 
-```{r, solution_03c_e, eval=FALSE}
+```{r, solution_03c_e}
 purrr::map_chr(all_spline_models, "converge")
 ```
 
@@ -696,63 +720,65 @@ After you complete the `calc_mae_from_laplace()`, the second code chunk applies 
 
 Complete all steps to define the `calc_mae_from_laplace()` function below.  
 
-```{r, solution_03d_a, eval=FALSE}
+```{r, solution_03d_a}
 calc_mae_from_laplace <- function(mvn_result, Xtrain, Xtest, y_train, y_test, num_samples)
 {
   # generate posterior samples from the approximate MVN posterior
-  post <- 
+  post <- generate_lm_post_samples(mvn_result, length(mvn_result$mode) - 1, num_samples)
   
   # make posterior predictions on the training set
-  pred_train <- 
+  pred_train <- make_post_lm_pred(Xtrain, post)
   
   # make posterior predictions on the test set
-  pred_test <- 
+  pred_test <- make_post_lm_pred(Xtest, post)
   
   # calculate the error between the training set predictions
   # and the training set observations
-  error_train <- 
-  
+  error_train <- abs(y_train - pred_train$Umat)
+
   # calculate the error between the test set predictions
   # and the test set observations
-  error_test <- 
-  
+  error_test <- abs(y_test - pred_test$Umat)
+
   # calculate the MAE on the training set
-  mae_train <- 
-  
+  mae_train <- colMeans(error_train)
+
   # calculate the MAE on the test set
-  mae_test <- 
-  
+  mae_test <- colMeans(error_test)
+
   # book keeping, package together the results
   mae_train_df <- tibble::tibble(
     mae = mae_train
-  ) %>% 
-    mutate(dataset = "training") %>% 
+  ) %>%
+    mutate(dataset = "training") %>%
     tibble::rowid_to_column("post_id")
-  
+
   mae_test_df <- tibble::tibble(
     mae = mae_test
-  ) %>% 
-    mutate(dataset = "test") %>% 
+  ) %>%
+    mutate(dataset = "test") %>%
     tibble::rowid_to_column("post_id")
-  
+
   # you must specify the order, J, associated with the spline model
-  mae_train_df %>% 
-    bind_rows(mae_test_df) %>% 
-    mutate(J = )
+  mae_train_df %>%
+    bind_rows(mae_test_df) %>%
+    mutate(J = length(mvn_result$mode) - 1)
 }
 ```
 
 Apply the `calc_mae_from_laplace()` function to all 25 spline models.  
 
-```{r, solution_03d_b, eval=FALSE}
+```{r, solution_03d_b}
 set.seed(52133)
-all_spline_mae_results <- purrr::pmap_dfr(list(all_spline_models,
-                                               spline_matrices$design_matrix,
-                                               spline_matrices$test_matrix),
-                                          calc_mae_from_laplace,
-                                          y_train = ,
-                                          y_test = ,
-                                          num_samples = )
+all_spline_mae_results <- purrr::pmap_dfr(
+  list(
+    all_spline_models,
+    spline_matrices$design_matrix,
+    spline_matrices$test_matrix),
+  calc_mae_from_laplace,
+  y_train = train_02$y,
+  y_test = test_02$y,
+  num_samples = 2500)
 ```
 
 ### 3e)
@@ -767,19 +793,30 @@ If you completed the `calc_mae_from_laplace()` function correctly, you should ha
 
 #### SOLUTION
 
+##### Summary
+
 Summarize the posterior samples on the MAE on the training and test sets with boxplots.  
 
-```{r, solution_03e, eval=FALSE}
-### 
+```{r, solution_03e}
+all_spline_mae_results %>%
+  ggplot(mapping = aes(x = as.factor(J), y = mae)) + 
+  geom_boxplot(mapping = aes(fill = dataset)) + 
+  scale_fill_brewer(palette = "Set1")
 ```
 
 Summarize the posterior samples on the MAE on the training and test sets by focusing on the posterior median MAE values.  
 
-```{r, solution_03e_b, eval=FALSE}
-### 
+```{r, solution_03e_b}
+all_spline_mae_results %>%
+  filter(J > 3) %>%
+  ggplot(mapping = aes(x = J, y = mae)) + 
+  stat_summary(geom = "line", fun = "median") + 
+  facet_wrap(~ dataset)
 ```
 
-?  
+##### Based on these visualizations which models appear to overfit the training data?
+
+Based on these visualizations, it seems clear that spline models with order greater than 8 or so overfit the training data.
 
 ### 3f)
 
@@ -793,23 +830,28 @@ You will now calculate the posterior model weights associated with each model. T
 
 #### SOLUTION
 
-```{r, solution_03f, eval=FALSE}
+##### Evidence & Plot
+
+```{r, solution_03f}
 spline_evidence <- purrr::map_dbl(all_spline_models, "log_evidence")
 ```
 
-```{r, solution_03f_b, eval=FALSE}
-spline_weights <- 
-
+```{r, solution_03f_b}
+exp_evidence <- exp(spline_evidence)
+spline_weights <- exp_evidence / sum(exp_evidence)
 spline_dof <- seq(1, 50, by = 2)
 
 tibble::tibble(
-  w = 
+  w = spline_weights
 ) %>% 
-  mutate(J = ) %>% 
-  ggplot()
+  mutate(J = spline_dof) %>% 
+  ggplot(mapping = aes(x = as.factor(J), y = w)) + 
+  geom_bar(stat = "identity")
 ```
 
-?  
+##### Based on your visualization, which model is considered the best?
+
+Based on this visualization, the spline with **7** degrees of freedom is most probable.
 
 ### 3g)
 
@@ -819,4 +861,10 @@ You have compared the models several different ways, are your conclusions the sa
 
 #### SOLUTION
 
-?  
+##### Are your conclusions the same?
+
+Yes, both methods seem to suggest that a relatively low-order spline model is performs best/is most likely. 
+
+##### How do the assessments from the data split comparison compare to the evidence-based assessment?
+
+The metrics seem close, but the data split suggested a suggested a slightly-higher-order model (maybe less than 10 degrees of freedom) might be better. This could simply be due to the randomness of sampling the train/test data.
