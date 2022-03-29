@@ -45,9 +45,7 @@ The data are loaded in the code chunk and a glimpse is shown for you below. Ther
 
 ```{r, read_data}
 data_url <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/08/hw08_data.csv'
-
 df <- readr::read_csv(data_url, col_names = TRUE)
-
 df %>% glimpse()
 ```
 
@@ -59,9 +57,19 @@ df %>% glimpse()
 
 #### SOLUTION
 
-```{r, solution_01a}
+##### Visualization
 
+```{r, solution_01a}
+df %>%
+  pivot_longer(cols = starts_with("x")) %>%
+  ggplot() + 
+  geom_point(mapping = aes(x = y, y = value)) +
+  facet_wrap(~ name)
 ```
+
+##### Do you think there are trends between either input and the response?
+
+Based on this visualization, there does not seem to be a particularly clear trend between either input and the response.
 
 ### 1b)
 
@@ -73,8 +81,19 @@ You will fit multiple models of varying complexity in this problem. You will sta
 
 #### SOLUTION
 
+##### Fitting the model
+
 ```{r, solution_01b}
-### add more code chunks if you like
+mod_01 <- lm(
+  y ~ x1 + x2, 
+  data = df
+)
+```
+
+##### Coefficient summaries
+
+```{r}
+coefplot::coefplot(mod_01)
 ```
 
 
