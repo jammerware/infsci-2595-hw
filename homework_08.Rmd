@@ -198,7 +198,7 @@ Let's try using spline based features. We will use a high degree-of-freedom natu
 
 ```{r, solution_01f}
 mod05 <- lm(
-  y ~ (splines::ns(df$x1, df = 12)) * (x2 + I(x2^4)),
+  y ~ splines::ns(df$x1, df = 12) * (x2 + I(x2^4)),
   data = df
 )
 ```
@@ -328,7 +328,7 @@ pred_lm_01 <- tidy_predict(mod01, viz_grid)
 pred_lm_02 <- tidy_predict(mod02, viz_grid) 
 pred_lm_03 <- tidy_predict(mod03, viz_grid)
 pred_lm_04 <- tidy_predict(mod04, viz_grid)
-pred_lm_05 <- tidy_predict(mod05, viz_grid)
+# pred_lm_05 <- tidy_predict(mod05, viz_grid)
 # pred_lm_06 <- tidy_predict(mod06, viz_grid)
 ```
 
@@ -347,7 +347,49 @@ You will use `ggplot()` to visualize the predictions. You will use `geom_line()`
 
 #### SOLUTION
 
-Create separate code chunks for each visualization.  
+I created a function so I don't have to copy and paste the visualization code 6 times:
+
+```{r}
+visualize_predictions <- function(model, title) {
+  model %>%
+    ggplot(mapping = aes(x = x1)) + 
+    ggtitle(title) + 
+    geom_ribbon(mapping = aes(ymin = pred_lwr, ymax = pred_upr), fill = "orange") + 
+    geom_ribbon(mapping = aes(ymin = ci_lwr, ymax = ci_upr), fill = "gray") +
+    geom_line(mapping = aes(y = pred)) + 
+    coord_cartesian(ylim = c(-7, 7)) + 
+    facet_wrap(~ x2)
+}
+```
+
+
+##### Visualizations
+
+```{r}
+visualize_predictions(pred_lm_01, "Model 1")
+```
+
+```{r}
+visualize_predictions(pred_lm_02, "Model 2")
+```
+
+```{r}
+visualize_predictions(pred_lm_03, "Model 3")
+```
+
+```{r}
+visualize_predictions(pred_lm_04, "Model 4")
+```
+
+```{r, eval=FALSE}
+visualize_predictions(pred_lm_05, "Model 5")
+```
+
+```{r, eval=FALSE}
+visualize_predictions(pred_lm_06, "Model 6")
+```
+
+
 
 ### 2d)
 
@@ -355,7 +397,7 @@ Create separate code chunks for each visualization.
 
 #### SOLUTION
 
-What do you think?  
+**TODO**
 
 ## Problem 03
 
@@ -373,32 +415,36 @@ You will perform the Bayesian analysis using the Laplace Approximation just as y
 
 #### SOLUTION
 
-```{r, solution_03a_a, eval=FALSE}
-X03 <- 
+```{r, solution_03a_a}
+X03 <- model.matrix(
+  y ~ (x1 + I(x1^2)) * (x2 + I(x2^2)), 
+  data = df
+)
 
 info_03_weak <- list(
   yobs = df$y,
-  design_matrix = model.matrix() ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  design_matrix = X03,
+  mu_beta = 0,
+  tau_beta = 50,
+  sigma_rate = 1
 )
 ```
 
 
-```{r, solution_03a_b, eval=FALSE}
-X06 <- 
+```{r, solution_03a_b}
+X06 <- model.matrix(
+  y ~ (splines::ns(df$x1, df = 12)) * (x2 + I(x2^2) + I(x2^3) + I(x2^4)),
+  data = df
+)
 
 info_06_weak <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  yobs = df$y,
+  design_matrix = X06,
+  mu_beta = 0,
+  tau_beta = 50,
+  sigma_rate = 1
 )
 ```
-
-
 
 ### 3b)
 
@@ -408,47 +454,61 @@ The comments in the code chunk below tell you what you need to fill in. The unkn
 
 **Define the log-posterior function by completing the code chunk below. You must calculate the mean trend, `mu`, using matrix math between the design matrix and the unknown $\boldsymbol{\beta}$ column vector.**  
 
-*HINT*: This function should look very famaliar...  
+*HINT*: This function should look very familiar...  
 
 #### SOLUTION
 
-```{r, solution_03b, eval=FALSE}
+```{r, solution_03b}
 lm_logpost <- function(unknowns, my_info)
 {
   # specify the number of unknown beta parameters
-  length_beta <- 
+  length_beta <- length(unknowns) - 1
   
   # extract the beta parameters from the `unknowns` vector
-  beta_v <- 
+  beta_v <- unknowns[1:length_beta]
   
   # extract the unbounded noise parameter, varphi
-  lik_varphi <- 
+  lik_varphi <- unknowns[length_beta + 1]
   
   # back-transform from varphi to sigma
-  lik_sigma <- 
+  lik_sigma <- exp(lik_varphi)
   
   # extract design matrix
-  X <- 
+  X <- my_info$design_matrix
   
   # calculate the linear predictor
-  mu <- 
+  mu <- X %*% as.matrix(beta_v)
   
   # evaluate the log-likelihood
-  log_lik <- 
+  log_lik <- sum(dnorm(
+    x = my_info$yobs,
+    mean = mu,
+    sd = lik_sigma,
+    log = TRUE
+  )) 
   
   # evaluate the log-prior
-  log_prior_beta <- 
+  log_prior_beta <- sum(dnorm(
+    x = beta_v,
+    mean = my_info$mu_beta,
+    sd = my_info$tau_beta,
+    log = TRUE
+  ))
   
-  log_prior_sigma <- 
+  log_prior_sigma <- dexp(
+    x = lik_sigma,
+    rate = my_info$sigma_rate,
+    log = TRUE
+  )   
   
   # add the mean trend prior and noise prior together
-  log_prior <- 
+  log_prior <- log_prior_beta + log_prior_sigma
   
   # account for the transformation
-  log_derive_adjust <- 
+  log_derive_adjust <- lik_varphi
   
   # sum together
-  
+  log_lik + log_prior + log_derive_adjust
 }
 ```
 
@@ -461,26 +521,29 @@ The `my_laplace()` function is defined for you in the code chunk below. This fun
 my_laplace <- function(start_guess, logpost_func, ...)
 {
   # code adapted from the `LearnBayes`` function `laplace()`
-  fit <- optim(start_guess,
-               logpost_func,
-               gr = NULL,
-               ...,
-               method = "BFGS",
-               hessian = TRUE,
-               control = list(fnscale = -1, maxit = 1001))
+  fit <- optim(
+    start_guess,
+    logpost_func,
+    gr = NULL,
+    ...,
+    method = "BFGS",
+    hessian = TRUE,
+    control = list(fnscale = -1, maxit = 1001)
+  )
   
   mode <- fit$par
   post_var_matrix <- -solve(fit$hessian)
   p <- length(mode)
   int <- p/2 * log(2 * pi) + 0.5 * log(det(post_var_matrix)) + logpost_func(mode, ...)
+  
   # package all of the results into a list
-  list(mode = mode,
-       var_matrix = post_var_matrix,
-       log_evidence = int,
-       converge = ifelse(fit$convergence == 0,
-                         "YES", 
-                         "NO"),
-       iter_counts = as.numeric(fit$counts[1]))
+  list(
+    mode = mode,
+    var_matrix = post_var_matrix,
+    log_evidence = int,
+    converge = ifelse(fit$convergence == 0, "YES", "NO"),
+    iter_counts = as.numeric(fit$counts[1])
+  )
 }
 ```
 
@@ -489,8 +552,18 @@ my_laplace <- function(start_guess, logpost_func, ...)
 
 #### SOLUTION
 
+##### Model 3
+
 ```{r, solution_03c}
-### add more code chunks if you like
+laplace_03_weak <- my_laplace(rep(0, 10), lm_logpost, my_info = info_03_weak)
+paste("Converge:", laplace_03_weak$converge)
+```
+
+##### Model 6
+
+```{r}
+laplace_06_weak <- my_laplace(rep(0, 66), lm_logpost, my_info = info_06_weak)
+paste("Converge:", laplace_06_weak$converge)
 ```
 
 
@@ -524,13 +597,15 @@ viz_post_coefs <- function(post_means, post_sds, xnames)
 
 #### SOLUTION
 
+##### Model 3
+
 ```{r, solution_03d_a}
-### make the posterior coefficient visualization for model 3
+viz_post_coefs(laplace_03_weak$mode, diag(laplace_03_weak$var_matrix), c(colnames(X03),"whatever this is"))
 ```
 
 
 ```{r, solution_03d_b}
-### make the posterior coefficient visualization for model 6
+viz_post_coefs(laplace_06_weak$mode, diag(laplace_06_weak$var_matrix), c(colnames(X06), "whatever this is"))
 ```
 
 
@@ -559,21 +634,21 @@ You fit the Bayesian models assuming a diffuse or *weak* prior. Let's now try a 
 
 Define the lists of required information for the strong prior.  
 
-```{r, solution_03f_a, eval=FALSE}
+```{r, solution_03f_a}
 info_03_strong <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  yobs = df$y,
+  design_matrix = model.matrix(y ~ (x1 + I(x1^2)) * (x2 + I(x2^2)), data = df),
+  mu_beta = 0,
+  tau_beta = 1,
+  sigma_rate = 1 
 )
 
 info_06_strong <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = ,
-  sigma_rate = 
+  yobs = df$y,
+  design_matrix = model.matrix(y ~ (splines::ns(df$x1, df = 12)) * (x2 + I(x2^2) + I(x2^3) + I(x2^4)), data = df),
+  mu_beta = 0,
+  tau_beta = 1,
+  sigma_rate = 1
 )
 ```
 
