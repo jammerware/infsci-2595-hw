@@ -81,21 +81,22 @@ You will fit multiple models of varying complexity in this problem. You will sta
 
 #### SOLUTION
 
-##### Fitting the model
+##### Model
 
 ```{r, solution_01b}
-mod_01 <- lm(
+mod01 <- lm(
   y ~ x1 + x2, 
   data = df
 )
 ```
 
-##### Coefficient summaries
+##### Coefficient analysis
 
 ```{r}
-coefplot::coefplot(mod_01)
+coefplot::coefplot(mod01)
 ```
 
+It's hard to tell, but it looks like no coefficient is significant (x1 is close, maybe).
 
 ### 1c)
 
@@ -113,10 +114,18 @@ However, the formula interface provides a short-cut to create main effects and i
 
 #### SOLUTION
 
+##### Model
+
 ```{r, solution_01c}
-### add more code chunks if you like
+mod02 <- lm(y ~ x1 * x2, data = df)
 ```
 
+##### Coefficient analysis
+
+```{r}
+coefplot::coefplot(mod02)
+```
+There are four terms in the model - the intercept term, the two inputs, and a term expressing the interaction between the inputs. `x1` appears significant, as does the interaction between `x1` and `x2`.
 
 ### 1d)
 
@@ -132,9 +141,22 @@ The `*` operator will interact more than just inputs. We can interact expression
 
 #### SOLUTION
 
+##### Model
+
 ```{r, solution_01d}
-### add more code chunks if you like
+mod03 <- lm(
+  y ~ (x1 + I(x1^2)) * (x2 + I(x2^2)),
+  data = df
+)
 ```
+
+##### Coefficient analysis
+
+```{r}
+coefplot::coefplot(mod03)
+```
+
+This model contains 9 terms (the intercept, 2 linear terms, 2 quadratic terms, and interactions between each pair of linear/quadratic terms). Most features are not significant, but the intercept and `x2` quadratic term are.
 
 ### 1e)
 
@@ -146,10 +168,21 @@ Let's now try a more complicated model.
 
 #### SOLUTION
 
+##### Model
+
 ```{r, solution_01e}
-### add more code chunks if you like
+mod04 <- lm(
+  y ~ (x1 + I(x1^2) + I(x1^3) + I(x1^4)) * (x2 + I(x2^2) + I(x2^3) + I(x2^4)),
+  data = df
+)
 ```
 
+##### Coefficient analysis
+
+```{r}
+coefplot::coefplot(mod04)
+```
+It appears that in this model, only the intercept is significant.
 
 ### 1f)
 
@@ -161,10 +194,21 @@ Let's try using spline based features. We will use a high degree-of-freedom natu
 
 #### SOLUTION
 
+##### Model
+
 ```{r, solution_01f}
-### add more code chunks if you like
+mod05 <- lm(
+  y ~ (splines::ns(df$x1, df = 12)) * (x2 + I(x2^4)),
+  data = df
+)
 ```
 
+##### Coefficient analysis
+
+```{r}
+coefplot::coefplot(mod05)
+```
+In this model, it appears that **no** features are statistically significant.
 
 ### 1g)
 
@@ -176,10 +220,21 @@ Let's fit one final model.
 
 #### SOLUTION
 
+##### Model
+
 ```{r, solution_01g}
-### add more code chunks if you like
+mod06 <- lm(
+  y ~ (splines::ns(df$x1, df = 12)) * (x2 + I(x2^2) + I(x2^3) + I(x2^4)),
+  data = df
+)
 ```
 
+##### Coefficient analysis
+
+```{r}
+coefplot::coefplot(mod06)
+```
+Based on this visualization, it seems as though **no** features are statistically significant.
 
 ### 1h)
 
@@ -191,10 +246,26 @@ Now that you have fit multiple models of varying complexity, it is time to ident
 
 #### SOLUTION
 
+##### Glance
+
 ```{r, solution_01h}
-### add more code chunks if you like
+models <- list(
+  mod01,
+  mod02,
+  mod03,
+  mod04,
+  mod05,
+  mod06
+)
+
+models %>%
+  purrr::map_df(broom::glance) %>%
+  mutate(model.name = paste("model", 1:6), .before = r.squared)
 ```
 
+##### Discussion
+
+According to R-Squared, **model 6** is the best. According to both AIC and BIC, **model 3** is best.
 
 ## Problem 02
 
@@ -208,12 +279,14 @@ You will define a prediction or visualization test grid. This grid will allow yo
 
 #### SOLUTION
 
-```{r, solution_02a, eval=FALSE}
-viz_grid <- expand.grid(x1 = ,
-                        x2 = ,
-                        KEEP.OUT.ATTRS = FALSE,
-                        stringsAsFactors = FALSE) %>% 
-  as.data.frame() %>% tibble::as_tibble()
+```{r, solution_02a}
+viz_grid <- expand.grid(
+  x1 = seq(-3.2, 3.2, length.out = 101),
+  x2 = seq(-3, 3, length.out = 9),
+  KEEP.OUT.ATTRS = FALSE,
+  stringsAsFactors = FALSE) %>% 
+  as.data.frame() %>% 
+  tibble::as_tibble()
 ```
 
 
@@ -225,11 +298,19 @@ You will make predictions for each of the models and visualize their trends. A f
 tidy_predict <- function(mod, xnew)
 {
   pred_df <- predict(mod, xnew, interval = "confidence") %>% 
-    as.data.frame() %>% tibble::as_tibble() %>% 
+    as.data.frame() %>% 
+    tibble::as_tibble() %>% 
     dplyr::select(pred = fit, ci_lwr = lwr, ci_upr = upr) %>% 
-    bind_cols(predict(mod, xnew, interval = 'prediction') %>% 
-                as.data.frame() %>% tibble::as_tibble() %>% 
-                dplyr::select(pred_lwr = lwr, pred_upr = upr))
+    bind_cols(
+      predict(
+        mod, 
+        xnew, 
+        interval = 'prediction'
+      ) %>% 
+      as.data.frame() %>% 
+      tibble::as_tibble() %>% 
+      dplyr::select(pred_lwr = lwr, pred_upr = upr)
+    )
   
   xnew %>% bind_cols(pred_df)
 }
@@ -242,18 +323,13 @@ The first argument to the `tidy_predict()` function is a `lm()` model object and
 
 #### SOLUTION
 
-```{r, solution_02b, eval=FALSE}
-pred_lm_01 <- 
-
-pred_lm_02 <- 
-
-pred_lm_03 <- 
-
-pred_lm_04 <- 
-
-pred_lm_05 <- 
-
-pred_lm_06 <- 
+```{r, solution_02b}
+pred_lm_01 <- tidy_predict(mod01, viz_grid)
+pred_lm_02 <- tidy_predict(mod02, viz_grid) 
+pred_lm_03 <- tidy_predict(mod03, viz_grid)
+pred_lm_04 <- tidy_predict(mod04, viz_grid)
+pred_lm_05 <- tidy_predict(mod05, viz_grid)
+# pred_lm_06 <- tidy_predict(mod06, viz_grid)
 ```
 
 
@@ -301,8 +377,8 @@ You will perform the Bayesian analysis using the Laplace Approximation just as y
 X03 <- 
 
 info_03_weak <- list(
-  yobs = ,
-  design_matrix = ,
+  yobs = df$y,
+  design_matrix = model.matrix() ,
   mu_beta = ,
   tau_beta = ,
   sigma_rate = 
