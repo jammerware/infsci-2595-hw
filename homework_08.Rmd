@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 08"
 subtitle: "Assigned March 24, 2022; Due: March 30, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: March 30, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.
 
 ## Overview
 
@@ -30,7 +30,6 @@ This assignment will use packages from the `tidyverse` suite as well as the `coe
 
 ```{r, load_packages}
 library(tidyverse)
-
 library(coefplot)
 ```
 
