@@ -1,5 +1,6 @@
 ---
-title: "INFSCI 2595 Final, Part 1a: Exploration (Distribution & Counts)"
+title: "INFSCI 2595 Final"
+subtitle: "Part 1a: EDA (Variable distributions)"
 author: "Ben Stein"
 date: "3/23/2022"
 output: html_document
@@ -21,17 +22,17 @@ In this document, I examine the distributions and counts of the variables in the
 library(tidyverse)
 ```
 
-## Data
+## My tools
 
 ```{r}
-df_raw <- readr::read_csv("./final_project_train.csv", col_names = TRUE)
+source("./tools.R")
 ```
 
-## Cleaning
+
+## Load (tidied) data
 
 ```{r}
-df <- df_raw %>%
-  mutate_if(is.character, as.factor)
+df <- load_project_data()
 ```
 
 # Distributions and counts
@@ -39,13 +40,13 @@ df <- df_raw %>%
 ## Predictors: categorical (`region` and `customer`)
 
 ```{r}
-df_clean %>% 
+df %>% 
   select(where(is.factor), -outcome) %>%
   summary()
 ```
 
 ```{r, warning=FALSE}
-df_clean %>%
+df %>%
   select(where(is.factor), -outcome) %>%
   pivot_longer(cols = everything()) %>%
   ggplot(mapping = aes(x = value)) +
@@ -59,7 +60,7 @@ From this, we can see that `Other` is by far the most common category for custom
 
 ## Continuous predictors (all sentiment-related variables)
 
-Because there are many (`r df %>% select(where(is.numeric))`, to be exact) continuous predictors, let's examine their distributions in qualitative groups (i.e. grouped by the methods by which they are derived). Let's put together a quick function so we can easily visualizes different groups of predictors:
+Because there are many (`r df %>% select(where(is.numeric)) %>% length`, to be exact) continuous predictors, let's examine their distributions in qualitative groups (i.e. grouped by the methods by which they are derived). Let's put together a quick function so we can easily visualizes different groups of predictors:
 
 ```{r}
 visualize_distributions <- function(x, column_name_start) {

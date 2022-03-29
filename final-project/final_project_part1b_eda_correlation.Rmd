@@ -1,0 +1,43 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part 1b: EDA (Predictor correlations)"
+author: "Ben Stein"
+date: "3/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this doc, I analyze correlation among the predictors in the dataset.
+
+# Setup
+
+## Libraries/tools
+
+```{r}
+# libraries
+library(tidyverse)
+
+# my tools
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data()
+```
+
+# Analysis
+
+Let's look at correlations between continuous predictors.
+
+```{r}
+df %>%
+  select(is.numeric, -bookkeeping_vars)
+```
+
