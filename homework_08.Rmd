@@ -600,7 +600,10 @@ viz_post_coefs <- function(post_means, post_sds, xnames)
 ##### Model 3
 
 ```{r, solution_03d_a}
-viz_post_coefs(laplace_03_weak$mode, diag(laplace_03_weak$var_matrix), c(colnames(X03),"whatever this is"))
+viz_post_coefs(
+  laplace_03_weak$mode, 
+  diag(laplace_03_weak$var_matrix), 
+  c(colnames(X03),"whatever this is"))
 ```
 
 
