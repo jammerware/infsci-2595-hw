@@ -198,7 +198,7 @@ Let's try using spline based features. We will use a high degree-of-freedom natu
 
 ```{r, solution_01f}
 mod05 <- lm(
-  y ~ splines::ns(df$x1, df = 12) * (x2 + I(x2^4)),
+  y ~ splines::ns(df$x1, df = 12) * (x2 + I(x2^2)),
   data = df
 )
 ```
