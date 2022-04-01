@@ -1,7 +1,7 @@
 ---
 title: "INFSCI 2595 Spring 2022 Homework: 09"
 subtitle: "Assigned March 31, 2022; Due: April 7, 2022"
-author: "YOUR NAME HERE"
+author: "Ben Stein"
 date: "Submission time: April 7, 2022 at 11:00PM EST"
 output: html_document
 ---
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### Collaborators
 
-Include the names of your collaborators here.  
+I completed this assignment on my own.
 
 ## Overview
 
@@ -47,14 +47,29 @@ The complete probability model for logistic regression consists of the likelihoo
 As in lecture, you will assume that the $\boldsymbol{\beta}$-parameters are a-priori independent Gaussians with a shared prior mean $\mu_{\beta}$ and a shared prior standard deviation $\tau_{\beta}$.  
 
 **Write out complete probability model for logistic regression. You must write out the $n$-th observation's linear predictor using the inner product of the $n$-th row of a design matrix $\mathbf{x}_{n,:}$ and the unknown $\boldsymbol{\beta}$-parameter column vector. You can assume that the number of unknown coefficients is equal to $D + 1$.**  
-
 You are allowed to separate each equation into its own equation block.  
 
-*HINT*: The "given" sign, the vertical line, $\mid$, is created by typing `\mid` in a latex math expression. The product symbol (the giant PI) is created with `prod_{}^{}`.  
+*HINT*: The "given" sign, the vertical line, $\mid$, is created by typing `\mid` in a latex math expression. The product symbol (the giant PI) is created with `prod_{}^{}`.
 
 #### SOLUTION
 
-Add in your equations here.  
+##### Likelihood
+
+$$
+y_n \mid \mu_n ~ \text{Bernoulli}(y_n | \mu_n)
+$$
+
+$$
+\mu_n = \text{logit}^{-1}(\eta_n)
+$$
+
+$$
+\eta_n = \mathbf{x}_{n,:}\boldsymbol{\beta}
+$$
+
+$$
+p(\boldsymbol{\beta}) = \prod_{d=0}^{D+1}
+$$
 
 ### 1b)
 
@@ -69,7 +84,7 @@ train_df %>% glimpse()
 
 The `count()` function is used to count the number of observations associated with each binary class in the second code chunk. As shown below, the event occurs more frequently than the non-event, but the two classes are not overly imbalanced.  
 
-```{r, check_outcome_count, eval=TRUE}
+```{r, check_outcome_count}
 train_df %>% count(y)
 ```
 
@@ -81,9 +96,25 @@ It is always good practice to visualize data before fitting models. However, vis
 
 #### SOLUTION
 
-Add as many code chunks as you like for this problem.  
+##### Plots
 
-What do you think?  
+```{r}
+train_df %>%
+  ggplot(mapping = aes(x = x, y = y)) + 
+  geom_point(size = 4, alpha = .33)
+```
+
+```{r}
+train_df %>%
+  ggplot(mapping = aes(x = x, y = y)) + 
+  geom_jitter(size = 4, alpha = .3, height = .02, width = 0)
+
+```
+
+
+##### What trends do you see in the graphs? Does the event probability appear to increase or decrease as the input `x` increases?  
+
+Overall, the event probability seems to increase as `x` increases.
 
 ### 1c)
 
@@ -113,36 +144,34 @@ You will be defining a log-posterior function similar to those from previous ass
 
 Create the design matrices.  
 
-```{r, solution_01c_a, eval=FALSE}
-Xmat_linear <- 
-
-Xmat_cubic <-
-
-Xmat_spline7 <- 
+```{r, solution_01c_a}
+Xmat_linear <- model.matrix(y ~ x, data = train_df)
+Xmat_cubic <- model.matrix(y ~ poly(x, 3), data = train_df)
+Xmat_spline7 <- model.matrix(y ~ splines::ns(x, df = 7), data = train_df)
 ```
 
 Create the lists of required information.  
 
-```{r, solution_01c_b, eval=FALSE}
+```{r, solution_01c_b}
 info_linear <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = 
+  yobs = train_df$y,
+  design_matrix = Xmat_linear,
+  mu_beta = 0,
+  tau_beta = 5
 )
 
 info_cubic <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = 
+  yobs = train_df$y,
+  design_matrix = Xmat_cubic,
+  mu_beta = 0,
+  tau_beta = 5
 )
 
 info_spline7 <- list(
-  yobs = ,
-  design_matrix = ,
-  mu_beta = ,
-  tau_beta = 
+  yobs = train_df$y,
+  design_matrix = Xmat_spline7,
+  mu_beta = 0,
+  tau_beta = 5
 )
 ```
 
