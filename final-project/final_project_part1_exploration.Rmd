@@ -83,6 +83,18 @@ df %>% visualize_distributions("xb_")
 
 The figure suggests that most of the Bing lexicon features have approximately Gaussian distribution, though some seem slightly less so (e.g. `xb_05`, `xb_07`, `xb_08`).
 
+```{r}
+df %>%
+  select("region", starts_with("xb_")) %>%
+  pivot_longer(cols = starts_with("xb_")) %>%
+  ggplot(mapping = aes(x = value)) +
+  geom_histogram(bins = 50) +
+  facet_grid(region ~ name, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+
 ### Lexicon: NRC
 
 ```{r}
