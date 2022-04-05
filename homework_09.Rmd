@@ -201,9 +201,8 @@ logistic_logpost <- function(unknowns, my_info)
   intercept <- unknowns[1]
   coefs <- unknowns[-1]
   
-  # eta <- X * unknowns
-  eta <- intercept + coefs * my_info$xobs
-  
+  eta <- X %*% unknowns
+
   # calculate the event probability
   mu <- boot::inv.logit(eta)
   
@@ -287,21 +286,51 @@ What do you think?
 
 ```{r, solution_01e_a}
 laplace_linear <- my_laplace(rep(0, 2), logpost_func = logistic_logpost, my_info = info_linear)
-# laplace_cubic <- my_laplace(rep(0, 4), logpost_func = logistic_logpost, my_info = info_cubic)
-# laplace_spline7 <- my_laplace(rep(0, 8), logpost_func = logistic_logpost, my_info = info_cubic)
+laplace_cubic <- my_laplace(rep(0, 4), logpost_func = logistic_logpost, my_info = info_cubic)
+laplace_spline7 <- my_laplace(rep(0, 8), logpost_func = logistic_logpost, my_info = info_spline7)
 ```
 
-Calculate the 95% uncertainty intervals on the linear relationship model.  
+##### Linear model
+
+###### uncertainty intervals
 
 ```{r, solution_01e_b}
-conf
+linear_sd <- laplace_linear$var_matrix %>% diag() %>% sqrt()
+linear_upr <- laplace_linear$mode + 2 * linear_sd
+linear_lwr <- laplace_linear$mode - 2 * linear_sd
+
+print("BETA0")
+print(paste("lower bound", linear_lwr[1]))
+print(paste("upper bound", linear_upr[1]))
+print("")
+print("BETA1")
+print(paste("lower bound", linear_lwr[2]))
+print(paste("upper bound", linear_upr[2]))
 ```
 
-Calculate the 95% uncertainty intervals on the cubic relationship model.  
+###### Coefficient significance
+
+Both coefficients are significant at 95%.
+
+##### Cubic model
+
+###### Uncertainty intervals
 
 ```{r, solution_01e_c}
-### 
+cubic_sd <- laplace_cubic$var_matrix %>% diag() %>% sqrt()
+cubic_upr <- laplace_cubic$mode + 2 * cubic_sd
+cubic_lwr <- laplace_cubic$mode - 2 * cubic_sd
+
+seq(1:length(laplace_cubic$mode)) %>%
+  purrr::map(function(x) {
+    print(paste("BETA", x - 1))
+    print(paste("lower bound", cubic_lwr[x]))
+    print(paste("upper bound", cubic_upr[x]))
+  })
 ```
+###### Coefficient significance
+
+At 95%, $\beta_2$ is not significant, but the rest are.
 
 ### 1f)
 
@@ -315,16 +344,26 @@ Let's compare the performance of the models using the Evidence-based assessment.
 
 ```{r, solution_01f}
 log_evidence <- purrr::map_dbl(list(
-  laplace_linear#,
-  # laplace_cubic,
-  # laplace_spline7
+  laplace_linear,
+  laplace_cubic,
+  laplace_spline7
 ), "log_evidence")
 weights <- exp(log_evidence)
 weights
 ```
 ##### Which is best?
 
-**TODO**
+```{r}
+weights[1] / weights[2]
+```
+
+The linear model is better than the cubic model.
+
+```{r}
+weights[1] / weights[3]
+```
+
+The linear model also beats the spline model. Therefore **the linear model** is most likely.
 
 ### 1g)
 
@@ -332,7 +371,7 @@ weights
 
 #### SOLUTION
 
-What do you think?  
+Yes. Because 1b showed linear separability, it seems reasonable that a linear model would perform the best.
 
 ## Problem 02
 
@@ -427,7 +466,8 @@ summarize_logistic_pred_from_laplace <- function(mvn_result, Xtest, num_samples)
   betas <- as.matrix(betas)
   
   # make posterior predictions on the test set
-  pred_test <- betas * Xtest
+  browser()
+  pred_test <- Xtest %*% betas
   
   # calculate summary statistics on the posterior predicted probability
   # summarize over the posterior samples
@@ -467,8 +507,8 @@ The prediction summarizes should be executed in the code chunk below.
 set.seed(8123) 
 
 post_pred_summary_linear <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_linear, 2500)
-post_pred_summary_cubic <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_cubic, 2500)
-post_pred_summary_spline7 <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_spline7, 2500)
+# post_pred_summary_cubic <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_cubic, 2500)
+# post_pred_summary_spline7 <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_spline7, 2500)
 ```
 
 Print the dimensions of the objects to the screen.  
@@ -692,7 +732,7 @@ You will now execute the Laplace Approximation to fit the Bayesian logistic regr
 small_laplace_from_inform <- my_laplace(c(0, 0), logistic_logpost, my_info = info_small_inform)
 small_laplace_from_inform$mode
 ```
-
+(Strong prior prevents extreme slopes, )
 
 ```{r, solution_03c_b}
 small_laplace_from_weak <- my_laplace(c(0, 0), logistic_logpost, my_info = info_small_weak)
@@ -701,7 +741,7 @@ small_laplace_from_weak$mode
 
 ##### How do the posterior modes compare? Include text and code chunks to answer this question.  
 
-The modes are the same. Is this because it's a unimodal surface?
+Yes. The informative prior strongly constrains the coefficient size (under 2, with a prior SD of 2.5) while the weak prior does not (due to its prior of 50).
 
 ### 3d)
 
@@ -722,14 +762,13 @@ cov2cor(small_laplace_from_inform$var_matrix)
 cov2cor(small_laplace_from_weak$var_matrix)
 ```
 
-
 ### 3e)
 
 **Discuss the differences between the posterior correlation between the coefficients when an informative prior is used compared to a very weak prior on this very small data set.**  
 
 #### SOLUTION
 
-What do you think?  
+With the weak prior, the coefficients are highly correlated (almost 1!) With the stronger prior, the correlation is significantly reduced.
 
 ### 3f)
 
@@ -958,7 +997,7 @@ Create a custom tuning grid to further tune the elastic net `lambda` and `alpha`
 ```{r, solution_05c}
 enet_grid <- expand.grid(
   alpha = seq(0.1, 0.9, length.out = 9),
-  lambda = seq(length.out = 25)
+  lambda = seq(length.out = 25) # make the grid in log space
 )
 ```
 
