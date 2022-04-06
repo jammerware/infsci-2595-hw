@@ -308,6 +308,7 @@ print(paste("lower bound", linear_lwr[2]))
 print(paste("upper bound", linear_upr[2]))
 ```
 
+
 ###### Coefficient significance
 
 Both coefficients are significant at 95%.
@@ -460,20 +461,20 @@ The posterior summary statistics summarize the posterior samples. You must there
 summarize_logistic_pred_from_laplace <- function(mvn_result, Xtest, num_samples)
 {
   # generate posterior samples of the beta parameters
-  betas <- post_logistic_pred_samples(Xtest, mvn_result$mode)
-  
-  # data type conversion
-  betas <- as.matrix(betas)
-  
+  betas <- generate_glm_post_samples(mvn_result, num_samples) %>%
+    # convert to matrix
+    as.matrix
+
   # make posterior predictions on the test set
-  pred_test <- Xtest %*% betas
+  pred_test <- Xtest %*% t(betas)
   
   # calculate summary statistics on the posterior predicted probability
   # summarize over the posterior samples
+  summary_stats <- post_logistic_pred_samples(Xtest, betas)
   
   # posterior mean, should you summarize along rows (rowMeans) or 
   # summarize down columns (colMeans) ???
-  mu_avg <- colMeans(betas)
+  mu_avg <- colMeans(summary_stats)
   
   # posterior quantiles
   mu_q05 <- apply(pred_test$mu_mat, 1, stats::quantile, probs = 0.05)
@@ -610,19 +611,19 @@ post_pred_summary_spline7_class_b <- post_pred_summary_spline7_class %>%
 
 Determine the confusion matrix for the linear relationship below.  
 
-```{r, solution_02f_a}
+```{r, solution_02f_a, eval=FALSE}
 post_pred_summary_linear_class_b %>% count()
 ```
 
 Determine the confusion matrix for the cubic relationship below.  
 
-```{r, solution_02f_b}
+```{r, solution_02f_b, eval=FALSE}
 post_pred_summary_cubic_class_b %>% count()
 ```
 
 Determine the confusion matrix for the 7 degree-of-freedom spline below.  
 
-```{r, solution_02f_c}
+```{r, solution_02f_c, eval=FALSE}
 post_pred_summary_spline7_class_b %>% count()
 ```
 
@@ -917,7 +918,9 @@ Let's examine the posterior correlation matrix for the model with all triplet in
 #### SOLUTION
 
 ```{r, solution_04f}
-model_4f <- lm(y ~ .^3)
+model_4f <- lm(y ~ .^3, data = df)
+
+corrplot::corrplot(type = "upper")
 ```
 
 
@@ -981,7 +984,7 @@ enet_default$bestTune
 ```
 
 
-Based on RMSE, setting `alpha` to 1 and `lambda` to `r enet_default$bestTune %>% select(lambda)` is best. This implies a stronger use of Ridge regression than lasso.
+Based on RMSE, setting `alpha` to 1 and `lambda` to `r enet_default$bestTune %>% select(lambda)` is best. This implies complete use of LASSO regression (because alpha is 1).
 
 ### 5c)
 
@@ -1035,7 +1038,7 @@ enet_tune$bestTune
 
 ##### What do you think?
 
-Based on the best tune, the final model uses more Lasso than Ridge regression (because alpha is very small).
+Based on the best tune, the final model uses more LASSO than Ridge regression (because alpha is nearly 1).
 
 ### 5e)
 
@@ -1043,11 +1046,15 @@ Based on the best tune, the final model uses more Lasso than Ridge regression (b
 
 #### SOLUTION
 
+##### Final coefficients
+
 ```{r, solution_05e}
-enet_tune$finalModel$c
+coef(enet_tune$finalModel, enet_tune$bestTune$lambda)
 ```
 
-What do you think?  
+##### Nonzero coefficients
+
+Most linear terms are nonzero, and a handful of bivariate interaction coefficients are also nonzero. Only one triplet interaction is nonzero (x1, x2, and x4).
 
 ### 5f)
 
