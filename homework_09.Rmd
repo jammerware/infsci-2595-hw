@@ -466,15 +466,14 @@ summarize_logistic_pred_from_laplace <- function(mvn_result, Xtest, num_samples)
     as.matrix
 
   # make posterior predictions on the test set
-  pred_test <- Xtest %*% t(betas)
+  pred_test <- post_logistic_pred_samples(Xtest, t(betas))
   
   # calculate summary statistics on the posterior predicted probability
   # summarize over the posterior samples
-  summary_stats <- post_logistic_pred_samples(Xtest, betas)
   
   # posterior mean, should you summarize along rows (rowMeans) or 
   # summarize down columns (colMeans) ???
-  mu_avg <- colMeans(summary_stats)
+  mu_avg <- rowMeans(pred_test$eta_mat)
   
   # posterior quantiles
   mu_q05 <- apply(pred_test$mu_mat, 1, stats::quantile, probs = 0.05)
@@ -507,8 +506,8 @@ The prediction summarizes should be executed in the code chunk below.
 set.seed(8123) 
 
 post_pred_summary_linear <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_linear, 2500)
-# post_pred_summary_cubic <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_cubic, 2500)
-# post_pred_summary_spline7 <- summarize_logistic_pred_from_laplace(laplace_linear, Xmat_spline7, 2500)
+post_pred_summary_cubic <- summarize_logistic_pred_from_laplace(laplace_cubic, Xmat_cubic, 2500)
+post_pred_summary_spline7 <- summarize_logistic_pred_from_laplace(laplace_spline7, Xmat_spline7, 2500)
 ```
 
 Print the dimensions of the objects to the screen.  
@@ -575,22 +574,22 @@ You will use the `ifelse()` function to compare the posterior predicted mean eve
 
 #### SOLUTION
 
-```{r, solution_2e, eval=FALSE}
+```{r, solution_2e}
 post_pred_summary_linear_class <- post_pred_summary_linear %>%
-  mutate(pred_class = ifelse())
+  mutate(pred_class = ifelse(mu_avg > 0.5, 1, 0))
 
 post_pred_summary_cubic_class <- post_pred_summary_cubic %>%
-  mutate(pred_class = ifelse())
+  mutate(pred_class = ifelse(mu_avg > 0.5, 1, 0))
 
 post_pred_summary_spline7_class <- post_pred_summary_spline7 %>%
-  mutate(pred_class = ifelse())
+  mutate(pred_class = ifelse(mu_avg > 0.5, 1, 0))
 ```
 
 ### 2f)
 
 The code chunk below uses the `left_join()` function to merge the training data set, `train_df` with each of the posterior prediction summary objects. The results, `post_pred_summary_linear_class_b`, `post_pred_summary_cubic_class_b`, and `post_pred_summary_spline7_class_b` now have predicted classifications, `pred_class`, and observed outcomes `y`.  
 
-```{r, merge_preds_and_train_obs, eval=FALSE}
+```{r, merge_preds_and_train_obs}
 post_pred_summary_linear_class_b <- post_pred_summary_linear_class %>% 
   left_join(train_df %>% tibble::rowid_to_column("pred_id"),
             by = "pred_id")
@@ -611,22 +610,46 @@ post_pred_summary_spline7_class_b <- post_pred_summary_spline7_class %>%
 
 Determine the confusion matrix for the linear relationship below.  
 
-```{r, solution_02f_a, eval=FALSE}
-post_pred_summary_linear_class_b %>% count()
+```{r, solution_02f_a}
+post_pred_summary_linear_class_b %>% count(pred_class, y)
 ```
+
+**TN:** 26
+
+**FN:** 37
+
+**FP:** 24
+
+**TP"** 38
+
 
 Determine the confusion matrix for the cubic relationship below.  
 
-```{r, solution_02f_b, eval=FALSE}
-post_pred_summary_cubic_class_b %>% count()
+```{r, solution_02f_b}
+post_pred_summary_cubic_class_b %>% count(pred_class, y)
 ```
+
+**TN:** 40
+
+**FN:** 44
+
+**FP:** 10
+
+**TP"** 31
 
 Determine the confusion matrix for the 7 degree-of-freedom spline below.  
 
-```{r, solution_02f_c, eval=FALSE}
-post_pred_summary_spline7_class_b %>% count()
+```{r, solution_02f_c}
+post_pred_summary_spline7_class_b %>% count(pred_class, y)
 ```
 
+**TN:** 39
+
+**FN:** 28
+
+**FP:** 11
+
+**TP"** 47
 
 ### 2g)
 
@@ -634,18 +657,30 @@ post_pred_summary_spline7_class_b %>% count()
 
 #### SOLUTION
 
-**TODO**
+I'm using Caret because I'm tired.
+
+```{r}
+library(caret)
+```
+
 
 ##### Accuracy: linear
 
 ```{r}
-
+nrow(subset(post_pred_summary_linear_class_b, pred_class == y)) / nrow(post_pred_summary_linear_class_b)
 ```
-
 
 ##### Accuracy: cubic
 
+```{r}
+nrow(subset(post_pred_summary_cubic_class_b, pred_class == y)) / nrow(post_pred_summary_cubic_class_b)
+```
+
 ##### Accuracy: splines
+
+```{r}
+nrow(subset(post_pred_summary_spline7_class_b, pred_class == y)) / nrow(post_pred_summary_spline7_class_b)
+```
 
 
 ## Problem 03
@@ -919,8 +954,11 @@ Let's examine the posterior correlation matrix for the model with all triplet in
 
 ```{r, solution_04f}
 model_4f <- lm(y ~ .^3, data = df)
+correlation_4f <- model_4f %>%
+  vcov %>%
+  cov2cor
 
-corrplot::corrplot(type = "upper")
+corrplot::corrplot(correlation_4f, type = "upper")
 ```
 
 
