@@ -79,9 +79,7 @@ The `$beta_matrix` is constructed such that each column corresponds to a separat
 
 #### SOLUTION
 
-The two rows in `beta_matrix` correspond to the two unknowns to be learned (the slope and intercept). 
-
-**TODO why does alpha have 3**
+The two rows in `beta_matrix` correspond to the two unknowns to be learned (the slope and intercept, or weight and bias). The output layer, which is modeled with `alpha_vector`, has three elements because it has a single intercept (bias) and an element for each unknown to learn (the number of rows in the beta matrix).
 
 ### 1c)
 
@@ -91,7 +89,24 @@ The hidden units consist of two calculations. The first calculates the "linear p
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary.  
+##### Linear predictors
+
+$$
+x_{n,:}B_k
+$$
+
+##### Non-linear transformation of the predictors (logistic function)
+
+$$
+g(x) = \frac{e^x}{1-e^x}
+$$
+
+##### Hidden layer overall output
+
+$$
+h_{n,k}(x_{n,:}) = g(x_{n,:} \beta_k)
+$$
+
 
 ### 1d)
 
@@ -103,10 +118,12 @@ This function is general and therefore allows passing in an arbitrary non-linear
 
 #### SOLUTION
 
-```{r, solution_01d, eval=FALSE}
+```{r, solution_01d}
 calc_hidden_units <- function(X, B, g)
 {
   ### your code
+  A <- X %*% B
+  H <- g(A)
   
   ### book keeping
   return(list(A = A, H = H))
@@ -153,22 +170,24 @@ viz_hidden_trend_wrt_x <- function(v_mat, x_df, trend_type)
 
 #### SOLUTION
 
-```{r, solution_01e_a, eval=FALSE}
-X01
+```{r, solution_01e_a}
+X01 <- model.matrix(f ~ x, data = prob_01_df)
 
-nnet_hidden_2a
+nnet_hidden_2a <- calc_hidden_units(X01, params_01_2a$beta_matrix, boot::inv.logit)
 ```
 
 Visualize the hidden unit trends below.  
 
-```{r, solution_01e_b, eval=FALSE}
-viz_hidden_trend_wrt_x(,
-                       prob_01_df,
-                       "hidden linear predictors")
+```{r, solution_01e_b}
+viz_hidden_trend_wrt_x(
+  nnet_hidden_2a$A,
+  prob_01_df,
+  "hidden linear predictors")
 
-viz_hidden_trend_wrt_x(,
-                       prob_01_df,
-                       "hidden non-linear units")
+viz_hidden_trend_wrt_x(
+  nnet_hidden_2a$H,
+  prob_01_df,
+  "hidden non-linear units")
 ```
 
 ### 1f)
@@ -177,7 +196,7 @@ viz_hidden_trend_wrt_x(,
 
 #### SOLUTION
 
-What do you think?  
+**TODO**
 
 ### 1g)
 
@@ -187,7 +206,9 @@ The neural network response, $f$, is calculated as a linear combination of the n
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary.  
+$$
+f = \alpha_0 + \mathbf{H} \boldsymbol{\alpha}
+$$
 
 ### 1h)
 
@@ -197,18 +218,19 @@ As with the hidden units, you will use a function to calculate the neural networ
 
 #### SOLUTION
 
-```{r, solution_01h, eval=FALSE}
+```{r, solution_01h}
 calc_nnet_response <- function(H, a)
 {
   ### separate the vector into bias and weights
-  a0 <- 
-  a_w <- 
+  a0 <- a[,1]
+  a_w <- a[,2]
   
   # convert the weights to a column vector
-  a_col <- 
+  a_col <- t(a_w)
   
   # calculate the response (the output layer)
-  f <- 
+  browser()
+  f <- a0 + H %*% a_col
   
   as.vector(f)
 }
@@ -224,9 +246,9 @@ With all the calculations completed, let's now compare the neural network respon
 
 #### SOLUTION
 
-```{r, solution_01i, eval=FALSE}
+```{r, solution_01i}
 prob_01_df %>% 
-  mutate(nnet_f = calc_nnet_response( )) %>% 
+  mutate(nnet_f = calc_nnet_response(nnet_hidden_2a$H, nnet_hidden_2a$A)) %>% 
   ggplot(mapping = aes(x = x)) +
   geom_line(mapping = aes(y = nnet_f),
             color = "black", size = 1.15) +
@@ -252,7 +274,6 @@ url_load_01_2b <- paste(paste(url_load_dir, "hw_10_prob_01_params_2b.rds", sep =
                         sep="?")
 
 params_01_2b <- readr::read_rds( url_load_01_2b )
-
 params_01_2b
 ```
 
@@ -262,19 +283,21 @@ You will use these new parameters to calculate the hidden unit "linear predictor
 
 #### SOLUTION
 
-```{r, solution_02, eval=FALSE}
-nnet_hidden_2b <- 
+```{r, solution_02}
+nnet_hidden_2b <- calc_hidden_units(X01, params_01_2b$beta_matrix, boot::inv.logit)
 
-viz_hidden_trend_wrt_x( , 
-                       prob_01_df,
-                       "hidden linear predictors")
-
-viz_hidden_trend_wrt_x( , 
-                       prob_01_df,
-                       "hidden non-linear units")
+viz_hidden_trend_wrt_x( 
+  nnet_hidden_2b$A, 
+  prob_01_df,
+  "hidden linear predictors")
+  
+viz_hidden_trend_wrt_x(
+  nnet_hidden_2b$H, 
+  prob_01_df,
+  "hidden non-linear units")
 ```
 
-What do you think?  
+**TODO**
 
 ### 2b)
 
@@ -286,15 +309,17 @@ Let's now compare the responses associated with the two sets of parameters.
 
 #### SOLUTION
 
-```{r, solution_02b_a, eval=FALSE}
+```{r, solution_02b_a}
 results_2hidden <- prob_01_df %>% 
-  mutate(nnet_fa = calc_nnet_response( ),
-         nnet_fb = calc_nnet_response( ))
+  mutate(
+    nnet_fa = calc_nnet_response(nnet_hidden_2a$H, nnet_hidden_2a$A),
+    nnet_fb = calc_nnet_response(nnet_hidden_2b$H, nnet_hidden_2b$A)
+  )
 ```
 
 Now visualize the neural network predictions and compare to the true sine wave.  
 
-```{r, solution_02b_b, eval=FALSE}
+```{r, solution_02b_b}
 results_2hidden %>% 
   pivot_longer(!c("x", "f")) %>% 
   ggplot(mapping = aes(x = x)) +
@@ -355,37 +380,42 @@ params_02_5a
 
 Calculate the hidden unit "linear predictors" and non-linear hidden unit values.  
 
-```{r, solution_02d_a, eval=FALSE}
-nnet_hidden_5a <- 
-
-nnet_hidden_5b <- 
+```{r, solution_02d_a}
+nnet_hidden_5a <- calc_hidden_units(X01 , params_02_5a$beta_matrix, boot::inv.logit)
+nnet_hidden_5b <- calc_hidden_units(X01, params_02_5b$beta_matrix, boot::inv.logit)
 ```
 
 Visualize the behavior of the hidden units associated with the `params_02_5a` parameters.  
 
-```{r, solution_02d_b, eval=FALSE}
-viz_hidden_trend_wrt_x( , 
+```{r, solution_02d_b}
+viz_hidden_trend_wrt_x(nnet_hidden_5a$A, 
                        prob_01_df,
                        "hidden linear predictors")
 
-viz_hidden_trend_wrt_x( , 
+viz_hidden_trend_wrt_x(nnet_hidden_5a$H, 
                        prob_01_df,
                        "hidden non-linear units")
 ```
 
 Visualize the behavior of the hidden units associated with the `params_02_5b` parameters.  
 
-```{r, solution_02d_c, eval=FALSE}
-viz_hidden_trend_wrt_x( , 
+```{r, solution_02d_c}
+viz_hidden_trend_wrt_x(nnet_hidden_5b$A, 
                        prob_01_df,
                        "hidden linear predictors")
 
-viz_hidden_trend_wrt_x( , 
+viz_hidden_trend_wrt_x(nnet_hidden_5b$H, 
                        prob_01_df,
                        "hidden non-linear units")
 ```
 
-What do you think?  
+##### Describe the trends of the non-linear values for the fifth hidden unit, `h_05`, relative to its "linear predictor" values. 
+
+`h_05` gets coerced to zero much more quickly by the non-linear output for values of X above 1 in comparison to its linear predictor value.
+
+##### Discuss the differences between the two models (sets of parameters).
+
+**TODO**
 
 ### 2e)
 
@@ -397,10 +427,12 @@ Let's now calculate the neural network response for both with 5 hidden units.
 
 #### SOLUTION
 
-```{r, solution_02e_a, eval=FALSE}
+```{r, solution_02e_a}
 results_5hidden <- prob_01_df %>% 
-  mutate(nnet_fa = calc_nnet_response( ),
-         nnet_fb = calc_nnet_response( ))
+  mutate(
+    nnet_fa = calc_nnet_response(nnet_hidden_5a$H, nnet_hidden_5a$A),
+    nnet_fb = calc_nnet_response(nnet_hidden_5b$H, nnet_hidden_5b$A)
+  )
 ```
 
 Visualize the two neural network model predictions and compare with the true sine wave.  
@@ -508,7 +540,6 @@ In the previous problems, you focused on the predictions of a neural network. Yo
 url_03_train <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/10/hw_10_prob_03_train.csv'
 
 prob_03_df <- readr::read_csv( url_03_train, col_names = TRUE)
-
 prob_03_df %>% glimpse()
 ```
 
@@ -530,9 +561,18 @@ prob_03_lf %>% glimpse()
 
 #### SOLUTION
 
+#### Plots
+
 ```{r, solution_03a}
-###
+prob_03_lf %>%
+  ggplot(mapping = aes(y = y)) +
+  geom_point(mapping = aes(x = value)) + 
+  facet_wrap(~ name)
 ```
+
+##### Trends
+
+`x1` does not have a clear relationship to `y`. `x2` may have a very weak positive linear relationship with `y`, while `x3` may have a similarly weak negative linear relationship to `y`.
 
 ### 3b)
 
@@ -544,12 +584,13 @@ In the previous problems you used a logistic function as the non-linear function
 
 *HINT*: The hyperbolic tangent function in `R` is `tanh()`.  
 
-```{r, solution_03b, eval=FALSE}
+```{r, solution_03b}
 tibble::tibble(
-  x = 
+  x = seq(-5.5, 5.5, length.out = 101)
 ) %>% 
-  mutate(logistic_result = ,
-         tanh_result = ) %>% 
+  mutate(
+    logistic_result = boot::inv.logit(x),
+    tanh_result = tanh(x)) %>% 
   # rest of the code here is completed for you
   pivot_longer(!c("x")) %>% 
   ggplot(mapping = aes(x = x, y = value)) + 
@@ -570,11 +611,13 @@ tibble::tibble(
 
 You will fit the neural network by minimizing the sum of squared errors (SSE). Thus, we will work with a non-probabilistic setting, even though we derived the linear and generalized linear model fitting with likelihoods and priors. Remember that minimizing the SSE is analogous to maximizing a Gaussian log-likelihood!  
 
-**Write the expression for the SSE using the observed response $y$ and the neural network response $f$. You may write the SSE in either the summation or matrix/vector notation. If you use a summation notation use the subscript $n$ to denote a single observation. If you use matrix/vector notation denote the response vector as $\mathbf{y}$.**  
+**Write the expression for the SSE using the observed response $y$ and the neural network response $f$. You may write the SSE in either the summation or matrix/vector notation. If you use a summation notation use the subscript $n$ to denote a single observation. If you use matrix/vector notation denote the response vector as $\mathbf{y}$.**
 
 #### SOLUTION
 
-Add as many equation blocks as you feel are necessary.  
+$$
+argmin_{\beta_k=0, ... \beta_{k = H}, \alpha, \alpha_0} \left( \sum_{n=1}^N \left(  \left( y_n - f_n \right)^2 \right) \right)
+$$
 
 ### 3d)
 
