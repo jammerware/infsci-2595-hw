@@ -635,15 +635,15 @@ You will need to specify the design matrix for your neural network based on the 
 
 The code chunk is started for you below.  
 
-```{r, solution_03d, eval=FALSE}
+```{r, solution_03d}
 ### design matrix
-Xmat_03 <- 
+Xmat_03 <- model.matrix(y ~ ., data = prob_03_df}
 
 info_three_units <- list(
-  yobs = ,
-  design_matrix = ,
-  num_hidden = ,
-  transform_hidden = 
+  yobs = prob_03_df$y,
+  design_matrix = Xmat_03,
+  num_hidden = 3,
+  transform_hidden = tanh
 )
 
 info_three_units$num_params <- 
