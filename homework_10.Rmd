@@ -1026,21 +1026,29 @@ Compare the training set SSE across all of the models you trained with random in
 #### SOLUTION
 
 ```{r}
-env_global <- as.environment(".GlobalEnv")
-env_vars <- env_global %>% ls
+models <- list(
+  optim_fit_3_c,
+  optim_fit_3_d,
+  optim_fit_6_a,
+  optim_fit_6_b,
+  optim_fit_12_a,
+  optim_fit_12_b,
+  optim_fit_24_a,
+  optim_fit_24_b
+)
 
-fit_results_names <- env_vars[grepl("^optim_fit*", env_vars)]
+sses <- models %>%
+  purrr::map_dbl(my)
 
+df_results <- list(
+  model = c("3c", "3d", "6a", "6b", "12a", "12b", "24a", "24b"),
+  sse = models %>% map_dbl(function(x) x$value)
+) %>% as.tibble
 
-df_results <- as.tibble(
-  list(model = fit_results_names)
-) %>%
-  mutate(sse = as.symbol(model)$value)
-
-# optimization_values <- purrr::map()
 df_results
 ```
 
+On the training set, model 24a has the best performance by SSE.
 
 ## Problem 05
 
@@ -1048,9 +1056,7 @@ We know that we should **not** compare models strictly based on the training set
 
 ```{r, read_holdout_set}
 url_03_test <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/10/hw_10_prob_03_test.csv'
-
 prob_03_test_df <- readr::read_csv( url_03_test, col_names = TRUE)
-
 prob_03_test_df %>% glimpse()
 ```
 
@@ -1062,10 +1068,37 @@ You will define a function which makes predictions for you and calculates the Me
 
 #### SOLUTION
 
-```{r, solution_05a, eval=FALSE}
+```{r, solution_05a}
 assess_nnet_mse <- function(theta, num_hidden, transform_func, X, y)
 {
-  ###
+  # extract the hidden unit parameters
+  length_beta_per_unit <- ncol(X)
+  total_num_betas <- num_hidden * length_beta_per_unit
+  beta_vec <- theta[1:total_num_betas]
+  
+  # reorganize the beta parameters into a matrix
+  Bmat <- matrix(beta_vec, nrow = length_beta_per_unit, byrow = FALSE)
+  
+  # extract the output layer parameters
+  a_all <- theta[(total_num_betas + 1):length(theta)]
+  
+  # reorganize the output layer parameters by extracting
+  # the output layer intercept (the bias)
+  a0 <- a_all[1]
+  aw <- a_all[-1]
+  
+  # calculate the linear predictors associated with
+  # each hidden unit
+  A <- X %*% Bmat
+  
+  # pass through the non-linear transformation function
+  H <- transform_func(A)
+  
+  # calculate the response (the output layer)
+  f <- a0 + H %*% matrix(aw)
+  
+  # calculate the SSE
+  (f - y)^2 %>% sum
 }
 ```
 
@@ -1077,8 +1110,8 @@ Before you can calculate the MSE on the hold-out test set, you must create the t
 
 #### SOLUTION
 
-```{r, solution_05b, eval=FALSE}
-Xtest_03
+```{r, solution_05b}
+Xtest_03 <- model.matrix(y ~ ., data = prob_03_test_df)
 ```
 
 ### 5c)
@@ -1087,7 +1120,67 @@ Xtest_03
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary to complete the problem.  
+##### Utility function to make assessment easier
+
+```{r}
+calc_mse_5 <- function(params, num_hidden) {
+  assess_nnet_mse(
+    theta = params,
+    num_hidden = num_hidden,
+    transform_func = tanh,
+    X = Xtest_03,
+    y = prob_03_test_df$y
+  )
+}
+```
+
+##### 3-unit models
+
+```{r}
+models_5 <- list(
+  model_name = c("3c", "3d", "6a", "6b", "12a", "12b", "24a", "24b"),
+  params = models %>% map(function(x) x$par),
+  num_hidden = c(3, 3, 6, 6, 12, 12, 24, 24)
+) %>% 
+  as.tibble # %>% 
+  # mutate(sse = calc_mse_5(params, num_hidden))
+
+models_5
+```
+
+
+```{r}
+calc_mse_5(optim_fit_3_c$par, 3)
+```
+
+```{r}
+calc_mse_5(optim_fit_3_d$par, 3)
+```
+
+```{r}
+calc_mse_5(optim_fit_6_a$par, 6)
+```
+
+```{r}
+calc_mse_5(optim_fit_6_b$par, 6)
+```
+
+```{r}
+calc_mse_5(optim_fit_12_a$par, 12)
+```
+
+```{r}
+calc_mse_5(optim_fit_12_b$par, 12)
+```
+ 
+```{r}
+calc_mse_5(optim_fit_24_a$par, 24)
+```
+
+```{r}
+calc_mse_5(optim_fit_24_b$par, 24)
+```
+ 
 
 ### 5d)
 
@@ -1095,7 +1188,7 @@ Add as many code chunks as you feel are necessary to complete the problem.
 
 #### SOLUTION
 
-What do you think?  
+Based on test set performance, the 6-unit models were best (with the first random guess being barely better than the second.)
 
 ## Problem 06
 
@@ -1116,7 +1209,13 @@ You must specify the resampling scheme that `caret` will use to train, assess, a
 #### SOLUTION
 
 ```{r, solution_06a}
-### your code here
+my_ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 3,
+)
+
+my_metric <- "RMSE"
 ```
 
 ### 6b)
@@ -1129,11 +1228,32 @@ In a realistic application, it is always best to first fit linear models before 
 
 #### SOLUTION
 
-```{r, solution_06b, eval=FALSE}
+##### Model fitting
+
+```{r, solution_06b}
 set.seed(412412)
-nnet_default <- 
+nnet_default <- train(
+  y ~ .,
+  data = prob_03_df,
+  method = "nnet",
+  metic = my_metric,
+  trControl = my_ctrl,
+  preProcess = c("center", "scale"),
+  trace = FALSE
+)
+
+nnet_default
 ```
 
+The optimal parameters were **model size 5** and **decay = 0.1**.
+
+##### Assessment
+
+```{r}
+calc_mse_5(nnet_default$finalModel$wts, 5)
+```
+
+This seems **wrong**, but I tried.
 
 ### 6c)
 
@@ -1143,4 +1263,26 @@ You will only use the default `caret` tuning grid in this assignment. We could c
 
 #### SOLUTION
 
-What do you think?  
+According to the documentation, the `size` parameter corresponds to the number of units in the single hidden layer, while decay is a regularization parameter that prevents overfitting.
+
+# Dumping ground
+
+This is extra code I want to save for later but isn't used for the assignment.
+
+
+```{r, eval=FALSE}
+env_global <- as.environment(".GlobalEnv")
+env_vars <- env_global %>% ls
+
+fit_results_names <- env_vars[grepl("^optim_fit*", env_vars)]
+
+df_results <- as.tibble(
+  list(model = fit_results_names)
+) %>%
+  mutate(expression = paste(model, "$value", sep = "")) %>%
+  add_column(sse= eval(quote(expression)))
+# mutate(sse = eval(parse(text=expression)))
+
+# optimization_values <- purrr::map()
+df_results
+```
