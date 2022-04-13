@@ -1,0 +1,203 @@
+---
+title: "play"
+author: "Ben Stein"
+date: '2022-04-13'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# libraries
+library(caret)
+library(tidyverse)
+library(recipes)
+
+# my tools
+source("./tools.R")
+```
+
+# Regression
+
+```{r}
+df_raw <- load_project_data() %>%
+  select(-bookkeeping_vars, -outcome)
+df_raw %>% glimpse
+```
+
+## Preprocessing
+
+```{r}
+rec_preprocessed <- recipe(
+  response ~ .,
+  data = df_raw
+) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_log(all_outcomes())  %>%
+  prep()
+
+df <- bake(rec_preprocessed, new_data = df_raw)
+df %>% glimpse()
+```
+
+
+## Setup
+
+```{r}
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 5
+)
+
+metric_rmse <- "RMSE"
+
+train_lm <- function(formula, data) {
+  train(
+    formula,
+    data = data,
+    method = "lm",
+    metric = metric_rmse,
+    trControl = ctrl
+  )
+}
+```
+
+## Model 1: categorical features only (linear additive)
+
+```{r}
+df_model1 <- df %>%
+  select(where(is.factor), response)
+
+df_model1 %>% names
+```
+
+```{r}
+model1 <- train(
+  response ~ .,
+  data = df_model1,
+  method = "lm",
+  metric = metric_rmse,
+  trControl = ctrl
+)
+```
+
+## Model 2: Continuous features only (linear additive)
+
+```{r}
+df_model2 <- df %>%
+  select(is.numeric)
+
+df_model2 %>% names
+```
+
+
+```{r}
+model2 <- train(
+  response ~ .,
+  data = df_model2,
+  method = "lm",
+  metric = metric_rmse,
+  trControl = ctrl
+)
+```
+
+## Model 3: All features (linear additive)
+
+```{r}
+df_model3 <- df
+df_model3 %>% names
+```
+
+```{r}
+model3 <- train(
+  response ~ .,
+  data = df_model3,
+  method = "lm",
+  metric = metric_rmse,
+  trControl = ctrl
+)
+```
+
+## Model 4: Interact region with continuous inputs
+
+```{r}
+df_model4 <- df %>%
+  select(is.numeric, region)
+
+df_model4 %>% names
+```
+ 
+```{r}
+model4 <- train_lm(response ~ region * ., df_model4)
+```
+
+## Model 5: Interact customer with continuous inputs
+
+```{r}
+df_model5 <- df %>%
+  select(is.numeric, customer)
+
+df_model5 %>% names
+```
+
+```{r}
+model5 <- train_lm(response ~ customer * ., df_model5)
+```
+ 
+ ## Model 6: All pairwise interactions of continous inputs
+ 
+```{r}
+df_model6 <- df %>%
+  select(is.numeric)
+
+names(df_model6)
+```
+ 
+```{r}
+model6 <- train_lm(response ~ .^2, data = df_model6)
+```
+ 
+ ## Model 7: 
+ 
+ # Comparison
+ 
+```{r}
+model_results <- resamples(
+  list(
+    fit_1 = model1,
+    fit_2 = model2,
+    fit_3 = model3,
+    fit_4 = model4,
+    fit_5 = model5,
+    fit_6 = model6
+  )
+)
+```
+
+## RMSE
+
+```{r}
+dotplot(model_results, df, metric='RMSE')
+```
+
+## MAE
+
+```{r}
+dotplot(model_results, df, metric='RMSE')
+```
+
+## R^2
+
+```{r}
+dotplot(model_results, df, metric='Rsquared')
+```
+
+ 
+```{r}
+
+```
+ 
+ 
