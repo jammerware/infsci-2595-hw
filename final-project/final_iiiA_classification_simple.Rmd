@@ -1,0 +1,62 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIIa: Classification (simple models"
+author: "Ben Stein"
+date: "3/23/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I fit simple classification models to predict the `outcome` variable.
+
+# Setup
+
+## Libraries & tools
+
+```{r}
+library(tidyverse)
+library(recipes)
+library(caret)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df_raw <- load_project_data() %>%
+  select(-bookkeeping_vars, -response)
+
+df_raw %>% glimpse
+```
+
+# Models
+
+## Model 1: Categorical variables (linear additive)
+
+```{r}
+df_model1 <- df_raw %>%
+  select(where(is.factor))
+
+df_model1 %>% names
+```
+
+```{r}
+model1 <- glm(
+  outcome ~ .,
+  family = "binomial",
+  data = df_model1
+)
+```
+
+## Model 2: Continuous variables (linear additive)
+
+```{r}
+
+```
+
