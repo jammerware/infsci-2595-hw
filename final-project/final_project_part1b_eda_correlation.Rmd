@@ -37,7 +37,15 @@ df <- load_project_data()
 Let's look at correlations between continuous predictors.
 
 ```{r}
-df %>%
+df_continuous_predictors <- df %>%
   select(is.numeric, -bookkeeping_vars)
+
+df_continuous_predictors %>% glimpse()
+```
+
+## Correlation
+
+```{r}
+corrplot::corrplot(cor(df_continuous_predictors))
 ```
 

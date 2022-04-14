@@ -1063,7 +1063,6 @@ We know that we should **not** compare models strictly based on the training set
 
 ```{r, read_holdout_set}
 url_03_test <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/10/hw_10_prob_03_test.csv'
-
 prob_03_test_df <- readr::read_csv( url_03_test, col_names = TRUE)
 prob_03_test_df %>% glimpse()
 ```
