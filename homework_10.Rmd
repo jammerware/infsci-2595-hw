@@ -230,7 +230,6 @@ calc_nnet_response <- function(H, a)
   a_col <- a_w
   
   # calculate the response (the output layer)
-  # browser()
   f <- a0 + H %*% a_col
   
   as.vector(f)
@@ -457,7 +456,7 @@ results_5hidden <- prob_01_df %>%
 
 Visualize the two neural network model predictions and compare with the true sine wave.  
 
-```{r, solution_02e_b, eval=FALSE}
+```{r, solution_02e_b}
 results_5hidden %>% 
   pivot_longer(!c("x", "f")) %>% 
   ggplot(mapping = aes(x = x)) +
@@ -478,7 +477,7 @@ results_5hidden %>%
 
 The code chunk below is completed for you. The 2 hidden unit and 5 hidden unit model predictions are compared side by side.  
 
-```{r, solution_02f_a, eval=FALSE}
+```{r, solution_02f_a}
 results_2hidden %>% 
   mutate(num_hidden = 2) %>% 
   bind_rows(results_5hidden %>% 
@@ -545,7 +544,7 @@ The estimated slope is 1.
 
 #### SOLUTION
 
-What do you think?  
+In the linear model with the sine wave basis, there are only two unknowns (slope and intercept). In a neural net with 5 hidden units, there are **16** (5 hidden units * 2 unknowns + 5 hidden units + 1).
 
 ### 2i)
 
@@ -1026,21 +1025,37 @@ Compare the training set SSE across all of the models you trained with random in
 #### SOLUTION
 
 ```{r}
-env_global <- as.environment(".GlobalEnv")
-env_vars <- env_global %>% ls
+fits <- list(
+  optim_fit_3_c,
+  optim_fit_3_d,
+  optim_fit_6_a,
+  optim_fit_6_b,
+  optim_fit_12_a,
+  optim_fit_12_b,
+  optim_fit_24_a,
+  optim_fit_24_b
+)
 
-fit_results_names <- env_vars[grepl("^optim_fit*", env_vars)]
+model_names <- c(
+  "3c",
+  "3d",
+  "6a",
+  "6b",
+  "12a",
+  "12b",
+  "24a",
+  "24b"
+)
 
-
-df_results <- as.tibble(
-  list(model = fit_results_names)
+list(
+  name = model_names,
+  sse = fits %>% purrr::map_dbl(function(x) x$value)
 ) %>%
-  mutate(sse = as.symbol(model)$value)
+  as.tibble() 
 
-# optimization_values <- purrr::map()
-df_results
 ```
 
+Based on the training set, model `24a` had the best SSE.
 
 ## Problem 05
 
@@ -1050,7 +1065,6 @@ We know that we should **not** compare models strictly based on the training set
 url_03_test <- 'https://raw.githubusercontent.com/jyurko/INFSCI_2595_Spring_2022/main/HW/10/hw_10_prob_03_test.csv'
 
 prob_03_test_df <- readr::read_csv( url_03_test, col_names = TRUE)
-
 prob_03_test_df %>% glimpse()
 ```
 
@@ -1062,10 +1076,20 @@ You will define a function which makes predictions for you and calculates the Me
 
 #### SOLUTION
 
-```{r, solution_05a, eval=FALSE}
+```{r, solution_05a}
 assess_nnet_mse <- function(theta, num_hidden, transform_func, X, y)
 {
-  ###
+  info <- list(
+    design_matrix = X,
+    num_hidden = num_hidden,
+    transform_hidden = transform_func,
+    yobs = y
+  )
+  
+  sse <- my_neuralnet_sse(theta, info)
+  
+  # transform to mse
+  return(sse / length(y))
 }
 ```
 
@@ -1077,8 +1101,8 @@ Before you can calculate the MSE on the hold-out test set, you must create the t
 
 #### SOLUTION
 
-```{r, solution_05b, eval=FALSE}
-Xtest_03
+```{r, solution_05b}
+Xtest_03 = model.matrix(y ~ ., data = prob_03_test_df)
 ```
 
 ### 5c)
@@ -1087,7 +1111,26 @@ Xtest_03
 
 #### SOLUTION
 
-Add as many code chunks as you feel are necessary to complete the problem.  
+```{r}
+df_models <- list(
+  model = model_names,
+  parameters = purrr::map(fits, function(x) x$par),
+  num_hidden = c(3, 3, 6, 6, 12, 12, 24, 24)
+) %>%
+  as.tibble() %>%
+  mutate(mse = purrr::map2_dbl(parameters, num_hidden, function (parameters, num_hidden) {
+      assess_nnet_mse(
+        theta = parameters, 
+        num_hidden = num_hidden,
+        transform_func = tanh,
+        X = Xmat_03,
+        y = prob_03_test_df$y
+      )
+  }))
+
+df_models %>% arrange(mse)
+```
+
 
 ### 5d)
 
@@ -1095,7 +1138,7 @@ Add as many code chunks as you feel are necessary to complete the problem.
 
 #### SOLUTION
 
-What do you think?  
+Based on hold-out set performance, the first 3-unit model performs the best.
 
 ## Problem 06
 
@@ -1116,7 +1159,13 @@ You must specify the resampling scheme that `caret` will use to train, assess, a
 #### SOLUTION
 
 ```{r, solution_06a}
-### your code here
+my_ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 3
+)
+
+my_metric <- "RMSE"
 ```
 
 ### 6b)
@@ -1129,11 +1178,22 @@ In a realistic application, it is always best to first fit linear models before 
 
 #### SOLUTION
 
-```{r, solution_06b, eval=FALSE}
+```{r, solution_06b}
 set.seed(412412)
-nnet_default <- 
+nnet_default <- train(
+  y ~ .,
+  data = prob_03_df,
+  method = "nnet",
+  preProcess = c("center", "scale"),
+  metric = my_metric,
+  trControl = my_ctrl,
+  trace = FALSE
+)
+
+nnet_default
 ```
 
+The tuned model has **5** hidden units with a decay of **0.1**.
 
 ### 6c)
 
@@ -1143,4 +1203,5 @@ You will only use the default `caret` tuning grid in this assignment. We could c
 
 #### SOLUTION
 
-What do you think?  
+`size` corresponds to the number of units in the hidden layer. `decay` is a regularization parameter that constrains the size of the coefficients in the hidden layer.
+
