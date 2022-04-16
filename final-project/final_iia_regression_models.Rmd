@@ -1,0 +1,194 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIa: Regression models"
+author: "Ben Stein"
+date: "4/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I fit nine regression models and evaluate them against the training data. In Part IId, I choose the best of these models for additional tuning and validation against a test set.
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(caret)
+library(jtools)
+
+source("./tools.R")
+```
+
+## Load (lightly) preprocessed data
+
+Since this document is concerned with regression models, I select only the variables of interest.
+
+```{r}
+df <- load_project_data() %>%
+  select(-bookkeeping_vars, -outcome)
+
+df %>% glimpse
+```
+
+# Models
+
+For all regression models, I use 5-fold cross validation repeated 5 times using RMSE as the objective function.
+
+```{r}
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 5
+)
+
+metric_rmse <- "RMSE"
+
+train_lm <- function(formula, data) {
+  train(
+    formula,
+    data = data,
+    method = "lm",
+    preProcess = c("center", "scale"),
+    metric = metric_rmse,
+    trControl = ctrl
+  )
+}
+```
+
+## Model 1: categorical features only (linear additive)
+
+```{r}
+df_model1 <- df %>%
+  select(where(is.factor), response_log)
+
+df_model1 %>% names
+```
+
+```{r}
+model1 <- train_lm(
+  response_log ~ .,
+  data = df_model1
+)
+```
+
+## Model 2: Continuous features only (linear additive)
+
+```{r}
+df_model2 <- df %>%
+  select(where(is.numeric))
+
+df_model2 %>% names
+```
+
+
+```{r}
+model2 <- train_lm(
+  response_log ~ .,
+  data = df_model2
+)
+```
+
+## Model 3: All features (linear additive)
+
+```{r}
+df_model3 <- df
+df_model3 %>% names
+```
+
+```{r}
+model3 <- train_lm(
+  response_log ~ .,
+  data = df_model3
+)
+```
+
+## Model 4: Interact region with continuous inputs
+
+```{r}
+df_model4 <- df %>%
+  select(where(is.numeric), region)
+
+df_model4 %>% names
+```
+ 
+```{r}
+model4 <- train_lm(response_log ~ region * ., df_model4)
+```
+
+## Model 5: Interact customer with continuous inputs
+
+```{r}
+df_model5 <- df %>%
+  select(is.numeric, customer)
+
+df_model5 %>% names
+```
+
+```{r}
+model5 <- train_lm(response_log ~ customer * ., df_model5)
+```
+ 
+ ## Model 6: All pairwise interactions of continuous inputs
+ 
+```{r}
+df_model6 <- df %>%
+  select(is.numeric)
+
+names(df_model6)
+```
+ 
+```{r}
+model6 <- train_lm(response_log ~ .^2, data = df_model6)
+```
+ 
+ ## Model 7: 
+ 
+ ## Model 8:
+ 
+ ## Model 9:
+ 
+ # Comparison
+ 
+```{r}
+model_results <- resamples(
+  list(
+    fit_1 = model1,
+    fit_2 = model2,
+    fit_3 = model3,
+    fit_4 = model4,
+    fit_5 = model5,
+    fit_6 = model6
+  )
+)
+```
+
+## RMSE
+
+```{r}
+dotplot(model_results, df, metric='RMSE')
+```
+
+## MAE
+
+```{r}
+dotplot(model_results, df, metric='RMSE')
+```
+
+## R^2
+
+```{r}
+dotplot(model_results, df, metric='Rsquared')
+```
+
+```{r}
+summ(model3$finalModel)
+```
+ 
+ 

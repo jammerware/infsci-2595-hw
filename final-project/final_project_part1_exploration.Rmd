@@ -20,6 +20,7 @@ In this document, I examine the distributions and counts of the variables in the
 
 ```{r}
 library(tidyverse)
+library(visdat)
 ```
 
 ## My tools
@@ -32,10 +33,20 @@ source("./tools.R")
 ## Load (tidied) data
 
 ```{r}
-df <- load_project_data()
+df <- load_project_data(info = list(
+  convert_data_types = TRUE,
+  response_to_log = FALSE
+))
 ```
 
 # Distributions and counts
+
+## Missing values
+
+```{r}
+visdat::vis_miss(df)
+```
+
 
 ## Predictors: categorical (`region` and `customer`)
 
