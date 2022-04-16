@@ -35,28 +35,125 @@ df_raw <- load_project_data() %>%
 df_raw %>% glimpse
 ```
 
-# Models
+# Modeling
+
+A quick utility function so I can encapsulate model training:
+
+```{r}
+train_glm <- function(formula = outcome ~ ., data) {
+  set.seed(2022)
+  model <- train(
+    formula,
+    data = data,
+    method = "glm",
+    family = "binomial",
+    metric = "ROC",
+    preProcess = c("center", "scale"),
+    trControl = trainControl(
+      method = "repeatedcv", 
+      repeats = 5, 
+      number = 5,
+      classProbs = TRUE,
+      savePredictions = TRUE,
+      summaryFunction = twoClassSummary
+    )
+  )
+  
+  model
+}
+```
+
 
 ## Model 1: Categorical variables (linear additive)
 
 ```{r}
-df_model1 <- df_raw %>%
-  select(where(is.factor))
-
-df_model1 %>% names
-```
-
-```{r}
-model1 <- glm(
-  outcome ~ .,
-  family = "binomial",
-  data = df_model1
-)
+model1 <- train_glm(data = df_raw %>% select(where(is.factor)))
 ```
 
 ## Model 2: Continuous variables (linear additive)
 
 ```{r}
+model2 <- train_glm(data = df_raw %>% select(where(is.numeric), outcome))
+```
 
+## Model 3: All variables (linear additive)
+
+```{r}
+model3 <- train_glm(data = df_raw)
+```
+
+## Model 4: Interact region with continuous inputs
+
+```{r}
+model4 <- train_glm(
+  formula = outcome ~ region * .,
+  data = df_raw %>% select(
+    where(is.numeric),
+    region,
+    outcome
+  )
+)
+```
+
+## Model 5: Interact customer with continuous inputs
+
+```{r}
+model5 <- train_glm(
+  formula = outcome ~ customer * .,
+  data = df_raw %>% 
+    select(
+      where(is.numeric),
+      customer,
+      outcome
+    )
+)
+```
+
+**TODO: this is bad**
+
+## Model 6: All pairwise interactions of continuous inputs
+
+```{r}
+model6 <- train_glm(
+  formula = outcome ~ .^2,
+  data = df_raw %>% select(where(is.numeric), outcome)
+)
+```
+
+**TODO: THIS IS BADDER**
+
+## Model 7
+
+## Model 8
+
+## Model 9
+
+# Model evaluation
+
+```{r}
+model_results <- resamples(
+  list(
+    fit_1 = model1$model,
+    fit_2 = model2$model,
+    fit_3 = model3$model,
+    fit_4 = model4$model,
+    fit_5 = model5$model,
+    fit_6 = model6$model
+  )
+)
+```
+
+## Accuracy
+
+```{r}
+dotplot(model_results, "accuracy")
+```
+
+**NOTES:** 1 has strong accuracy and low kappa, suggesting that the model isn't guessing randomly?
+
+## ROC
+
+```{r}
+dotplot(model_results, metric = "ROC")
 ```
 
