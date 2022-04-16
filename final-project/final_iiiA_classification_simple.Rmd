@@ -40,7 +40,7 @@ df_raw %>% glimpse
 A quick utility function so I can encapsulate model training:
 
 ```{r}
-train_glm <- function(formula = outcome ~ ., data) {
+train_glm <- function(formula = outcome ~ ., data, metric) {
   set.seed(2022)
   model <- train(
     formula,
@@ -155,5 +155,16 @@ dotplot(model_results, "accuracy")
 
 ```{r}
 dotplot(model_results, metric = "ROC")
+```
+
+```{r}
+dum_model <- glm(
+  outcome ~ .,
+  data = df_raw,
+  family = "binomial"
+)
+
+predicts <- predict(dum_model, df_raw, )
+summary(predicts)
 ```
 
