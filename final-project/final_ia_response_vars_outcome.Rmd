@@ -1,0 +1,105 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part Ia: Prediction targets (`outcome`)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the `outcome` variable, which is our prediction target for the classification portions of the project.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(list(convert_data_types = TRUE, response_to_log = FALSE))
+df %>% glimpse()
+```
+
+# Exploratory Data Analysis
+
+The `outcome` is a binary variable which describes whether a given product failed to meet its sales goal (i.e. a value of `"event"` indicates that it **did not** meet its sales goal).
+
+## The variable itself
+
+```{r}
+df %>% 
+  select(outcome) %>%
+  summary()
+```
+
+
+```{r}
+df %>% 
+  mutate(outcome_logical = ifelse(outcome == "event", 1, 0)) %>%
+  select(outcome_logical) %>%
+  colMeans
+```
+
+The `event` outcome is relatively rare in the dataset (127 times out of `r 127+550` trials, or with about **`r round(127 / (127+550), 3)`** probability). Good for PPG! Or maybe they're not setting their goals ambitiously enough...
+
+
+## In relation to categorical predictors
+
+Let's see if the distribution is dramatically different when we segment the data using the categorical predictors of `region` and `customer`.
+
+### Region
+
+```{r, warning=FALSE}
+df %>%
+  select(region, outcome) %>%
+  ggplot(mapping = aes(x = outcome)) + 
+  geom_histogram(stat = "count") +
+  facet_wrap(~region, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+It seems as though the event occurs in relatively the same proportion across regions.
+
+### Customer
+
+```{r, warning=FALSE}
+df %>%
+  select(customer, outcome) %>%
+  ggplot(mapping = aes(x = outcome)) + 
+  geom_histogram(stat = "count") +
+  facet_wrap(~customer, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+We start to see some variation here. The `event` outcome seems extremely rare in regions D and E, but closer to the average rate in the rest of the regions. Let's explore a little:
+
+Recall that the overall event probability is about **0.188**. How do the individual region event probabilities compare?
+
+```{r}
+df %>%
+  select(customer, outcome) %>%
+  group_by(customer) %>%
+  summarize(
+    outcome = mean(ifelse(outcome == "event", 1, 0))
+  ) %>%
+  ggplot(mapping = aes(x = customer, y = outcome)) +
+  geom_col() + 
+  geom_hline(yintercept = 0.1875923, color = "red", size = 2, linetype=2)
+  
+```
+
+This reveals that a few regions (B, D, and E) contribute a much lower event rate to the overall mean event rate.
+

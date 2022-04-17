@@ -1,0 +1,95 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part Ia: Predictors (categorical)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the categorical predictors (`customer` and `region`).
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(list(convert_data_types = TRUE, response_to_log = FALSE))
+df %>% glimpse()
+```
+
+# Exploratory data analysis
+
+## The `customer` predictor
+
+Let's take a look at possible values for the `customer` categorical predictor and their distribution:
+
+```{r, warning=FALSE}
+df %>% 
+  select(customer) %>%
+  ggplot(mapping = aes(x = customer)) + 
+  geom_histogram(stat = "count")
+```
+
+Key takeaways here are that there aren't many unique values for the predictor (9) and that one category ("Other") contains significantly more observation than others.
+
+## The `region` predictor
+
+Similarly, we can start by looking at the distribution of `region` values.
+
+```{r, warning=FALSE}
+df %>% 
+  select(region) %>%
+  ggplot(mapping = aes(x = region)) + 
+  geom_histogram(stat = "count")
+```
+
+This factor has even fewer levels (only 3). However, unlike `customer`, the levels are more slightly more similar, with `ZZ` having the most values but the others not terribly far behind.
+
+## Combinations of the categoricals
+
+Let's look at the distribution of these factors together.
+
+**NOTE:** This concept and some of the code to make it happen is borrowed from the airfoil EDA example posted on Canvas for this course.
+
+```{r}
+df %>%
+  ggplot(mapping = aes(x = customer)) +
+  geom_bar(mapping = aes(fill = region), position = "dodge") + 
+  scale_fill_viridis_d("region") + 
+  theme_bw()
+```
+
+This reveals some interesting insights. First, the only level of `customer` that contains every region is `"Other"`, and regions `ZZ` and `YY` never appear in the same level of `customer` except for `"Other"`. Some `customer` levels appear in only one region.
+
+After horsing around with this (and **borrowing more code from the airfoil EDA example**, I realized this can be better explained with a heatmap):
+
+```{r}
+df %>% 
+  count(customer, region) %>% 
+  ggplot(mapping = aes(x = customer, y = region)) +
+  geom_tile(mapping = aes(fill = n)) +
+  geom_text(mapping = aes(label = n,
+                          color = n > median(n)),
+            size = 7) +
+  scale_fill_viridis_c(guide = 'none') +
+  scale_color_manual(guide = 'none',
+                     values = c("TRUE" = 'black',
+                                "FALSE" = 'white')) +
+  theme_bw()
+```
+
+This reinforces that customer groups `B`, `D`, `E`, and `K` are less populous and highlights the lack of overlap among customer groups and regions in non-`"Other"` regions. 

@@ -20,7 +20,7 @@ In this document, I fit nine regression models and evaluate them against the tra
 
 ```{r}
 library(tidyverse)
-library(caret)
+library(caret)\
 library(jtools)
 
 source("./tools.R")
@@ -149,6 +149,34 @@ model6 <- train_lm(response_log ~ .^2, data = df_model6)
 ```
  
  ## Model 7: 
+ 
+ I'm throwing wild haymakers here (my signature move in this project), but for my first solo model, I tried linear combinations of every continuous input that appears to have a Gaussian distribution (see Part Ia: Continuous predictors).
+ 
+ 
+```{r}
+df %>%
+    select(starts_with("xb")) %>%
+    pivot_longer(cols = everything()) %>%
+    ggplot(mapping = aes(x = value)) +
+    geom_histogram(bins = 50) +
+    geom_smooth()
+    facet_wrap(~name, scales = "free") + 
+    theme_bw() +
+    theme(axis.text.y = element_blank())
+```
+
+```{r}
+df_model7 <- df %>%
+  select(
+    xb_01,
+    xb_02,
+    xb_03,
+    xb_04,
+    xn_01,
+    xn_03
+  )
+```
+ 
  
  ## Model 8:
  

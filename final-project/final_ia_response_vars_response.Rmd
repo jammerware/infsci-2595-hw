@@ -1,0 +1,120 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part Ia: Prediction targets (`response`)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the `response` variable, which is our prediction target for the linear regression portions of the project.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(list(convert_data_types = FALSE, response_to_log = FALSE))
+df %>% glimpse()
+```
+
+# Exploratory Data Analysis
+
+The `response` variable is continuous and describes the number of hours per week are associated with a product being sold to a customer. 
+
+## The variable itself
+
+Let's start with its distribution:
+
+```{r}
+df %>%
+  ggplot(mapping = aes(x = response)) +
+  geom_histogram(bins = 50)
+```
+
+We can see that the variable is heavily right-tailed. We can understand this quantitatively by looking at summary distribution statistics.
+
+```{r}
+df %>%
+  select(response) %>%
+  summary()
+```
+
+This suggests that (independent of the assignment requirements), we probably want to log-transform the variable when modeling. 
+
+```{r}
+df %>%
+  ggplot(mapping = aes(x = log(response))) +
+  geom_histogram(bins = 50)
+```
+
+After log transformation, we can see that the distribution appears more normal. Let's add the log-transformed response to the dataframe for the rest of our analysis (since that's what we'll be predicting anyway):
+
+```{r}
+df <- df %>%
+  mutate(log_response = log(response))
+```
+
+
+## In relation to categorical predictors
+
+Let's examine how `response`'s distribution looks when faceted by our categorical variables `region` and `customer`. 
+
+### Region
+
+```{r}
+df %>%
+  select(region, log_response) %>%
+  ggplot(mapping = aes(x = log_response)) + 
+  geom_histogram(bins = 50) +
+  facet_wrap(~region, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+These distributions don't seem to vary widely by region. It may be worth noting that region `XX`'s distribution is a little more "ragged" than the other two. Let's move onto `customer`.
+
+### Customer
+
+```{r}
+df %>%
+  select(customer, log_response) %>%
+  ggplot(mapping = aes(x = log_response)) + 
+  geom_histogram(bins = 50) +
+  facet_wrap(~customer, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+The thing I notice here most is that the `Other` customer group appears the most Gaussian after log transformation. Combined with the fact that `Other` is the most populous group (as shown in previous portions of the analysis) my inference is that the "true" distribution can be approximated with a Gaussian.
+
+### Both categorical predictors
+
+```{r}
+df %>%
+  select(customer, region, log_response) %>%
+  ggplot(mapping = aes(x = log_response)) + 
+  geom_histogram(bins = 50) +
+  facet_wrap(~ customer + region, scales = "free") + 
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+
+```
+
+
+## In relation to continuous predictors
+
+Let's now visualize how the 

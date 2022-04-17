@@ -47,3 +47,15 @@ y_vars <-  list(
   as.name("outcome"),
   as.name("response")
 )
+
+# visualize distributions of predictors, selecting by column name start
+visualize_distributions <- function(x, column_name_start) {
+  x %>%
+    select(starts_with(column_name_start)) %>%
+    pivot_longer(cols = everything()) %>%
+    ggplot(mapping = aes(x = value)) +
+    geom_histogram(bins = 50) +
+    facet_wrap(~name, scales = "free") + 
+    theme_bw() +
+    theme(axis.text.y = element_blank())
+}
