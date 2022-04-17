@@ -20,7 +20,7 @@ In this document, I fit nine regression models and evaluate them against the tra
 
 ```{r}
 library(tidyverse)
-library(caret)\
+library(caret)
 library(jtools)
 
 source("./tools.R")
