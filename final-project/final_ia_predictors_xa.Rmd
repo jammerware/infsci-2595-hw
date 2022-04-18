@@ -1,0 +1,80 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part Ia: Predictors (Lexicon: AFINN)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the variables from the AFINN lexicon data.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(response_log, outcome, starts_with("xa"))
+df %>% glimpse
+```
+
+# Distributions
+
+Let's look at the distributions of the variables first.
+
+```{r}
+df %>% 
+  select(starts_with("xa")) %>%
+  summary
+```
+
+Note the differing scales of the variables - we'll probably want to center and scale for most models.
+
+```{r}
+visualize_distributions(df, "xa")
+```
+
+While all variables are loosely gaussian, some are more Gaussian than others (e.g. `xa_02` through `xa_05`).
+
+# In relation to the continuous `response` variable
+
+Note that I log-transformed response since that's what I'll be predicting anyway.
+
+```{r}
+df %>%
+  pivot_longer(cols = starts_with("xa")) %>%
+  ggplot(mapping = aes(x = value, y = response_log)) +
+  geom_point() +
+  geom_smooth(formula = y ~ x, method = "loess") + 
+  facet_wrap(~ name, scales = "free")
+```
+
+It's a bit hard to tell what these distributions really are. Some of them seem as though they might be exponentially distributed, but the loess line looks pretty linear.
+
+# In relation to the `outcome` classification target
+
+```{r}
+df %>%
+  select(-response_log) %>%
+  mutate(outcome = ifelse(outcome == "event", 1, 0)) %>%
+  pivot_longer(cols = starts_with("xa")) %>%
+  ggplot(mapping = aes(x = value, y = outcome)) +
+  geom_point(size = 4, alpha = .33) +
+  facet_wrap(~ name, scales = "free")
+```
+
+It's unclear how this group of predictors relates to `outcome`. High values of the predictors seem to result in more nonevents than events, but it's not clear what happens at middle and low values.

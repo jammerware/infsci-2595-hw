@@ -108,13 +108,22 @@ df %>%
   select(customer, region, log_response) %>%
   ggplot(mapping = aes(x = log_response)) + 
   geom_histogram(bins = 50) +
-  facet_wrap(~ customer + region, scales = "free") + 
+  facet_grid(region ~ customer, scales = "free") + 
   theme_bw() +
   theme(axis.text.y = element_blank())
-
 ```
-
 
 ## In relation to continuous predictors
 
-Let's now visualize how the 
+Let's now visualize how `response` correlates with the continuous predictors from each group.
+
+### Lexicon: NRC
+
+```{r}
+df %>%
+  select(log_response, starts_with("xa")) %>%
+  cor %>%
+  corrplot::corrplot(type = "upper")
+```
+
+Of the NRC lexicon variables, only `xa_01` and `xa_02` seem moderately correlated with `log_response`. It's important to notice that some of these predictors are also highly correlated with each other (e.g. `xa_04` is correlated with `xa_07` and `xa_08`, and with `xa_05` to a lesser extent.)

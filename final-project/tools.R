@@ -3,25 +3,30 @@ library(tidyverse)
 library(recipes)
 
 # enable raw/pre-processed loading of data
-load_project_data <- function(info = NULL) {
+load_project_data <- function(convert_categoricals = TRUE, response_to_log = TRUE, outcome_to_numeric = TRUE) {
   df <- readr::read_csv("./final_project_train.csv", col_names = TRUE)
   
-  if (is.null(info)) {
-    info = list(
-      convert_data_types = TRUE,
-      response_to_log = TRUE
-    )
-  }
+  # i'm going to assume that i never want the row_id until further notice
+  df <- df %>%
+    select(-rowid)
   
-  if (info$convert_data_types == TRUE) {
+  if (convert_categoricals == TRUE) {
     df <- df %>% mutate_if(is.character, as.factor)
   }
   
-  if (info$response_to_log == TRUE) {
+  if (response_to_log == TRUE) {
     df <- df %>%
       mutate(
         response_log = log(response),
         response = NULL
+      )
+  }
+  
+  if (outcome_to_numeric == TRUE) {
+    df <- df %>%
+      mutate(
+        outcome_numeric = ifelse(outcome == "event", 1, 0),
+        outcome = NULL
       )
   }
   
@@ -39,9 +44,6 @@ load_project_data <- function(info = NULL) {
   
   return(df)
 }
-
-# select semantic groups of variables
-bookkeeping_vars <- as.name("rowid")
 
 y_vars <-  list(
   as.name("outcome"),

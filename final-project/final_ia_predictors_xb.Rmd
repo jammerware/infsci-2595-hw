@@ -1,0 +1,99 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part Ia: Predictors (Lexicon: Bing)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the variables from the Bing lexicon data.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(response_log, outcome_numeric, starts_with("xb"))
+
+df %>% glimpse
+```
+
+# Distributions
+
+Let's look at the distributions of the variables first.
+
+```{r}
+df %>% 
+  select(starts_with("xb")) %>%
+  summary
+```
+
+Like some of the other continuous sentiment variable groups, this group varies in scale, so centering and scaling is likely wise.
+
+```{r}
+visualize_distributions(df, "xb")
+```
+
+Similar to previous groups, all variables are loosely Gaussian. Again, some are more Gaussian than others (e.g. `xb_01` through `xb_04`).
+
+# Correlation within the group
+
+Let's see if any of these inputs are correlated with one another or with the response variable.
+
+```{r}
+df %>%
+  select(
+    starts_with("xb"), 
+    response_log
+  ) %>%
+  cor() %>%
+  corrplot::corrplot(type = "upper")
+```
+
+We can see moderate correlation within the group, with the 4th input being noticeably correlated with inputs 7 and 8 and somewhat with input 5. 3 is also correlated with 5. It may be wise to exclude `xb_05` from analysis since it's correlated with multiple other inputs.
+
+Somewhat worryingly, no input is strongly correlated with the response variable. 
+
+# Relationship to target variables
+
+## The continuous `response` variable
+
+Note that I log-transformed response since that's what I'll be predicting anyway.
+
+```{r}
+df %>%
+  pivot_longer(cols = starts_with("xb")) %>%
+  ggplot(mapping = aes(x = value, y = response_log)) +
+  geom_point() +
+  geom_smooth(formula = y ~ x, method = "loess") + 
+  facet_wrap(~ name, scales = "free")
+```
+
+These loess lines have a bit more personality than the ones we saw in the distributions of the AFINN lexicon variables. The variables are somewhat linear, but may benefit from a "folded" version of linear like splines.
+
+## The `outcome` classification target
+
+```{r}
+df %>%
+  select(-response_log) %>%
+  pivot_longer(cols = starts_with("xb")) %>%
+  ggplot(mapping = aes(x = value, y = outcome_numeric)) +
+  geom_point(size = 4, alpha = .33) +
+  facet_wrap(~ name, scales = "free")
+```
+
+Like the NRC lexicon, it's unclear how this group relates to the outcome. In some cases (e.g. inputs 1, 6, 8), low values of the predictor seem to increase the probability of a nonevent somewhat, but no relationship seems strong.

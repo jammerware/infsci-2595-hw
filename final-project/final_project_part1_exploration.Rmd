@@ -33,10 +33,7 @@ source("./tools.R")
 ## Load (tidied) data
 
 ```{r}
-df <- load_project_data(info = list(
-  convert_data_types = TRUE,
-  response_to_log = FALSE
-))
+df <- load_project_data(response_to_log = FALSE)
 ```
 
 # Distributions and counts
