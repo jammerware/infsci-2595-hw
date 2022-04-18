@@ -4,6 +4,9 @@ subtitle: "Part Ia: Prediction targets (`outcome`)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
 ---
 
 ```{r setup, include=FALSE}
@@ -20,14 +23,13 @@ In this document, I perform exploratory data analysis on the `outcome` variable,
 
 ```{r}
 library(tidyverse)
-
 source("./tools.R")
 ```
 
 ## Data
 
 ```{r}
-df <- load_project_data(list(convert_data_types = TRUE, response_to_log = FALSE))
+df <- load_project_data(response_to_log = FALSE, outcome_to_numeric = FALSE)
 df %>% glimpse()
 ```
 

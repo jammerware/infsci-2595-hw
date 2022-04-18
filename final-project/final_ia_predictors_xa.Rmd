@@ -4,6 +4,9 @@ subtitle: "Part Ia: Predictors (Lexicon: AFINN)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
 ---
 
 ```{r setup, include=FALSE}
@@ -28,7 +31,7 @@ source("./tools.R")
 
 ```{r}
 df <- load_project_data() %>%
-  select(response_log, outcome, starts_with("xa"))
+  select(response_log, outcome_numeric, starts_with("xa"))
 df %>% glimpse
 ```
 
@@ -50,6 +53,37 @@ visualize_distributions(df, "xa")
 
 While all variables are loosely gaussian, some are more Gaussian than others (e.g. `xa_02` through `xa_05`).
 
+## Distinct values
+
+As I worked with each group of continuous predictors, I noticed that some seem to have more unique values than others. Let's quantify that:
+
+```{r}
+df %>%
+  select(starts_with("xa")) %>%
+  pivot_longer(cols = everything()) %>%
+  group_by(name) %>% 
+  unique %>%
+  count
+```
+
+As we can see here, inputs 1, 4, 7, and 8 have significantly more unique values than the others.
+
+# Correlation within the group
+
+Let's see if any of these inputs are correlated with one another or with the response variable.
+
+```{r}
+df %>%
+  select(
+    starts_with("xa"), 
+    response_log
+  ) %>%
+  cor() %>%
+  corrplot::corrplot(type = "upper")
+```
+
+We can observe some weak correlations between inputs (e.g. input 1 seems weakly correlated with 2-4 and 7. 4 is correlated with 5, 7, and 8, etc.). Of these, only 1 and 2 seem somewhat correlated with the response variable.
+
 # In relation to the continuous `response` variable
 
 Note that I log-transformed response since that's what I'll be predicting anyway.
@@ -70,9 +104,8 @@ It's a bit hard to tell what these distributions really are. Some of them seem a
 ```{r}
 df %>%
   select(-response_log) %>%
-  mutate(outcome = ifelse(outcome == "event", 1, 0)) %>%
   pivot_longer(cols = starts_with("xa")) %>%
-  ggplot(mapping = aes(x = value, y = outcome)) +
+  ggplot(mapping = aes(x = value, y = outcome_numeric)) +
   geom_point(size = 4, alpha = .33) +
   facet_wrap(~ name, scales = "free")
 ```

@@ -4,6 +4,9 @@ subtitle: "Part Ia: Predictors (Lexicon: Bing)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
 ---
 
 ```{r setup, include=FALSE}
@@ -49,6 +52,19 @@ visualize_distributions(df, "xb")
 ```
 
 Similar to previous groups, all variables are loosely Gaussian. Again, some are more Gaussian than others (e.g. `xb_01` through `xb_04`).
+
+## Unique values
+
+As I worked with each group of continuous predictors, I noticed that some seem to have more unique values than others. Let's quantify that:
+
+```{r}
+df %>%
+  select(starts_with("xb")) %>%
+  pivot_longer(cols = everything()) %>%
+  group_by(name) %>% 
+  unique %>%
+  count
+```
 
 # Correlation within the group
 
@@ -96,4 +112,4 @@ df %>%
   facet_wrap(~ name, scales = "free")
 ```
 
-Like the NRC lexicon, it's unclear how this group relates to the outcome. In some cases (e.g. inputs 1, 6, 8), low values of the predictor seem to increase the probability of a nonevent somewhat, but no relationship seems strong.
+Like the AFINN lexicon, it's unclear how this group relates to the outcome. In some cases (e.g. inputs 1, 6, 8), low values of the predictor seem to increase the probability of an event somewhat, but no relationship seems strong.

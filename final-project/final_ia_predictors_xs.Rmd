@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Predictors (Lexicon: NRC)"
+subtitle: "Part Ia: Predictors (Lexicon: SentimentR)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # About this document
 
-In this document, I perform exploratory data analysis on the variables from the NRC lexicon data.
+In this document, I perform exploratory data analysis on the variables from the SentimentR lexicon data.
 
 # Setup
 
@@ -30,7 +30,7 @@ source("./tools.R")
 
 ```{r}
 df <- load_project_data() %>%
-  select(response_log, outcome_numeric, starts_with("xn"))
+  select(response_log, outcome_numeric, starts_with("xs"))
 
 df %>% glimpse
 ```
@@ -41,17 +41,17 @@ Let's look at the distributions of the variables first.
 
 ```{r}
 df %>% 
-  select(starts_with("xn")) %>%
+  select(-outcome_numeric, -response_log) %>%
   summary
 ```
 
-Like other groups of sentiment variables, these inputs have differing scales and will thus need preprocessing.
+Somewhat unlike other groups of sentiment variables, the scales of these inputs are less different. Nevertheless, I'll probably center and scale them, because I'm not sure if you ever _don't_ want to do that.
 
 ```{r}
-visualize_distributions(df, "xn")
+visualize_distributions(df, "xs")
 ```
 
-As we've probably come to expect, these variables have approximately normal distribution, especially the lower-numbered ones.
+In this predictor group, some of the distributions are noticeably less normal (e.g. inputs 4 and 5, which seem right-tailed).
 
 ## Distinct values
 
@@ -59,14 +59,14 @@ As I worked with each group of continuous predictors, I noticed that some seem t
 
 ```{r}
 df %>%
-  select(starts_with("xn")) %>%
+  select(-outcome_numeric, -response_log) %>%
   pivot_longer(cols = everything()) %>%
   group_by(name) %>% 
   unique %>%
   count
 ```
 
-As we can see, some inputs have high ranges of values, while others do not. This may affect our choices for modeling later.
+In this group, variables have very similar numbers of total distinct values, so it's hard to infer whether one encodes more knowledge about the response/outcome than the others.
 
 # Correlation within the group
 
@@ -74,15 +74,12 @@ Let's see if any of these inputs are correlated with one another or with the res
 
 ```{r}
 df %>%
-  select(
-    starts_with("xn"), 
-    response_log
-  ) %>%
+  select(-outcome_numeric) %>%
   cor() %>%
   corrplot::corrplot(type = "upper")
 ```
 
-The figure shows that some variables are somewhat correlated (e.g. 2 and 6, 5 and 7, 5 and 8). We might consider removing variables with high correlation during freeform modeling. As with some of the other lexicons, no variable is super-strongly correlated with the response.
+We can observe significant correlation between the predictors here - in particular, inputs 5 and 6 seem highly correlated with a few other inputs. Thus, they're probably good candidates to exclude in refined modeling.
 
 # Relationship to target variables
 
@@ -92,7 +89,7 @@ Note that I log-transformed response since that's what I'll be predicting anyway
 
 ```{r}
 df %>%
-  pivot_longer(cols = starts_with("xn")) %>%
+  pivot_longer(cols = starts_with("xs")) %>%
   ggplot(mapping = aes(x = value, y = response_log)) +
   geom_point() +
   geom_smooth(formula = y ~ x, method = "loess") + 
@@ -101,16 +98,15 @@ df %>%
 
 Like the other lexicons, the loess lines are nearly (but not exactly) linear. Based on this figure and the corresponding ones for other groups, I'm interested in using splines to model them.
 
-
 ## The `outcome` classification target
 
 ```{r}
 df %>%
   select(-response_log) %>%
-  pivot_longer(cols = starts_with("xn")) %>%
+  pivot_longer(cols = starts_with("xs")) %>%
   ggplot(mapping = aes(x = value, y = outcome_numeric)) +
   geom_point(size = 4, alpha = .33) +
   facet_wrap(~ name, scales = "free")
 ```
 
-Of all of the predictor groups evaluated so far, this one has the strongest separation between events and non-events, with lower values of each predictor seeming to correlate with the event occurring. This may suggest that we want to lean on the NRC lexicon during classification modeling.
+What I take from this is that this group is not as useful for predicting `outcome` as some of the other sentiment-based predictor groups, as there is not a clear trend bteween values of each predictor and the outcome.

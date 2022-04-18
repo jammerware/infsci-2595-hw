@@ -4,7 +4,7 @@ library(recipes)
 
 # enable raw/pre-processed loading of data
 load_project_data <- function(convert_categoricals = TRUE, response_to_log = TRUE, outcome_to_numeric = TRUE) {
-  df <- readr::read_csv("./final_project_train.csv", col_names = TRUE)
+  df <- readr::read_csv("./final_project_train.csv", col_names = TRUE, col_types = cols())
   
   # i'm going to assume that i never want the row_id until further notice
   df <- df %>%
@@ -60,4 +60,16 @@ visualize_distributions <- function(x, column_name_start) {
     facet_wrap(~name, scales = "free") + 
     theme_bw() +
     theme(axis.text.y = element_blank())
+}
+
+# custom knit to output directory
+knit_to_dir <- function(input) {
+  rmarkdown::render(
+    input,
+    output_file = paste(
+      "./knit/",
+      input
+    ),
+    envir = globalenv()
+  )
 }

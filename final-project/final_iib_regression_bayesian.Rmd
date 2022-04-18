@@ -1,0 +1,60 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIb: Bayesian Regression Models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I evaluate two Bayesian regression models based on findings from the simple frequentist modeling done in the previous section.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(rstanarm)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(-outcome_numeric)
+```
+
+
+# First Bayesian model (model 3 from the previous section)
+
+Model 3 from the previous section was my best-performing model (RMSE = 0.3299896, R^2 = 0.6233415). It uses all linear predictors. Let's examine this model from a Bayesian perspective.
+
+```{r}
+bayesian_model3 <- stan_lm(
+  response_log ~ ., 
+  data = df,
+  prior = R2(location = .2),
+  seed = 2022,
+  trace = FALSE
+)
+```
+
+```{r}
+bayesian_model3 %>% summary
+```
+
+```{r}
+plot(bayesian_model3)
+```
+
