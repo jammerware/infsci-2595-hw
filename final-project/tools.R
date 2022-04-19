@@ -50,6 +50,13 @@ y_vars <-  list(
   as.name("response")
 )
 
+visualize_correlations <- function(data, column_name_start) {
+  data %>%
+    select(starts_with(column_name_start)) %>%
+    GGally::ggpairs(progress = FALSE) + 
+    theme_bw()
+}
+
 # visualize distributions of predictors, selecting by column name start
 visualize_distributions <- function(x, column_name_start) {
   x %>%

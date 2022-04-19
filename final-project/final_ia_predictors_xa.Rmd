@@ -73,16 +73,17 @@ As we can see here, inputs 1, 4, 7, and 8 have significantly more unique values 
 Let's see if any of these inputs are correlated with one another or with the response variable.
 
 ```{r}
-df %>%
-  select(
-    starts_with("xa"), 
-    response_log
-  ) %>%
-  cor() %>%
-  corrplot::corrplot(type = "upper")
+visualize_correlations(df, "xa")
+# df %>%
+#   select(
+#     starts_with("xa"), 
+#     response_log
+#   ) %>%
+#   cor() %>%
+#   corrplot::corrplot(type = "upper")
 ```
 
-We can observe some weak correlations between inputs (e.g. input 1 seems weakly correlated with 2-4 and 7. 4 is correlated with 5, 7, and 8, etc.). Of these, only 1 and 2 seem somewhat correlated with the response variable.
+There is at least moderate correlation among several variables. 
 
 # In relation to the continuous `response` variable
 
