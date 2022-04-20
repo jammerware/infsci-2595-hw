@@ -1,0 +1,28 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIIa: Classification models (Discussion)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I review the coefficient summaries from the top 3 classification models identified in the previous section and compare them to identify the most important inputs.
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```

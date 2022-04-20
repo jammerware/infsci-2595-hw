@@ -59,6 +59,8 @@ my_supertrain <- function(formula, data, method = "lm", parallelize = TRUE, ...)
   
   out <- tryCatch(
     {
+      set.seed(2022)
+      
       model <- train(
         formula,
         data = data,

@@ -129,10 +129,12 @@ model4 <- train_lm(response_log ~ region * ., df_model4)
 
 ```{r}
 df_model5 <- df %>%
-  select(is.numeric, customer)
+  select(where(is.numeric), customer)
 
 df_model5 %>% names
 ```
+
+**TODO:** problem?
 
 ```{r}
 model5 <- train_lm(response_log ~ customer * ., df_model5)
@@ -147,6 +149,8 @@ df_model6 <- df %>%
 names(df_model6)
 ```
  
+**TODO:** problem? 
+
 ```{r}
 model6 <- train_lm(response_log ~ .^2, data = df_model6)
 ```
@@ -159,7 +163,7 @@ I'm throwing wild haymakers here (my signature move in this project), but for my
 model3_coef <- summary(model3)$coefficients
 
 model7_significant_predictors <- model3_coef %>%
-  as.tibble %>%
+  as_tibble %>%
   mutate(predictor = row.names(model3_coef)) %>%
   rename(p = 4) %>%
   filter(p < .05)
@@ -188,7 +192,7 @@ df_model7 <- df %>%
 df_model7
 ```
 
-Now we can model:
+Now we can model with a parabolic basis function:
 
 ```{r}
 model7 <- train_lm(
@@ -207,7 +211,7 @@ model7 <- train_lm(
 ```
  
  
- ## Model 8:
+## Model 8:
  
 For this model, I chose predictors based on my EDA. I'm specifically interested in predictors which:
 
