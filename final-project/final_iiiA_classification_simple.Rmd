@@ -30,7 +30,7 @@ source("./tools.R")
 
 ```{r}
 df_raw <- load_project_data() %>%
-  select(-bookkeeping_vars, -response)
+  select(-response_log)
 
 df_raw %>% glimpse
 ```
