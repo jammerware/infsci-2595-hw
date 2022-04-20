@@ -1,0 +1,85 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIa: Regression models (Discussion)"
+author: "Ben Stein"
+date: "4/13/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I review the coefficient summaries from the top 3 regression models identified in the previous section and compare them to identify the most important inputs.
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+```
+
+## Models
+
+```{r}
+model3 <- readr::read_rds("./models/lm_rank1_model3.rds")
+model4 <- readr::read_rds("./models/lm_rank2_model4.rds")
+model7 <- readr::read_rds("./models/lm_rank3_model7.rds")
+```
+
+# Coefficient summaries
+
+```{r}
+model3 %>%
+  varImp() %>%
+  plot(top = 15, main ="Model 3: top 15 coefficients")
+```
+
+```{r}
+model4 %>%
+  varImp() %>%
+  plot(top = 15, main ="Model 4: top 15 coefficients")
+```
+
+```{r}
+model7 %>%
+  varImp() %>%
+  plot(top = 15, main ="Model 7: top 15 coefficients")
+```
+
+# Discussion
+
+The most obvious takeaway here is that `region` is a useful predictor for `response`, particularly when looking at a product's performance in region `YY` or `ZZ`. The presence of `regionYY` in any model seems to improve it dramatically. The `customer` categorical also seems useful, showing up in some capacity in the top 15 predictors of both models 3 and 7. It's notable that it doesn't show up in Model 4 because it's not included, making me suspect it's a useful but noisy input.
+
+The sentiment features are a little harder to understand from these plots. It seems notable to me that `xw_01` appears in the top 15 of two models and that it makes a strong contribution to model 7 when squared. Model 7 is not as good as the other two, but not far behind in RMSE.
+
+# Visualizing common coefficients
+
+```{r}
+importance_to_df <- function(model, model_name) {
+  varImp(model)$importance %>%
+    mutate(model = model_name) %>%
+    rownames_to_column() %>%
+    rename(importance = Overall, predictor = rowname) %>%
+    head(5)
+}
+
+df_importance <- rbind(
+  importance_to_df(model3, "model3"),
+  importance_to_df(model4, "model4"),
+  importance_to_df(model7, "model7")
+)
+
+df_importance %>%
+  ggplot(mapping = aes(x = predictor, y = importance, fill = model)) + 
+  geom_bar(stat="identity", position = position_dodge2(preserve = "single"))
+```
+

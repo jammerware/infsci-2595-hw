@@ -333,11 +333,12 @@ By RMSE, models 3 and 4 are strongest (in that order) with 7 and 2 not far behin
 dotplot(model_results, df, metric='Rsquared')
 ```
  
-As with RMSE, models 3, 4, and 7 lead the pack. I'll save 3 and 4 for comparison to later models.
+As with RMSE, models 3, 4, and 7 lead the pack. I'll save these models for comparison to later models.
  
 ```{r}
 readr::write_rds(model3, "./models/lm_rank1_model3.rds")
 readr::write_rds(model4, "./models/lm_rank2_model4.rds")
+readr::write_rds(model7, "./models/lm_rank3_model7.rds")
 ```
  
  

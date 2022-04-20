@@ -1,0 +1,108 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part IIc: Regression model predictions"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I make predictions with my two top-performing regression models in order to understand trends between the predicted log-response and the observed log-response.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(-outcome_numeric)
+
+df %>% glimpse()
+```
+
+## Models to evaluate
+
+```{r}
+model3 <- readr::read_rds("./models/lm_rank1_model3.rds")
+model4 <- readr::read_rds("./models/lm_rank2_model4.rds")
+```
+
+## Predictions
+
+### Model3
+
+```{r}
+df_model3 <- df %>%
+  mutate(
+    pred_response_log = predict(model3, df, level = .95),
+    resid_response_log = resid(model3)
+  )
+```
+
+###
+
+```{r}
+df_model4 <- df %>%
+  mutate(
+    pred_response_log = predict(model4, df, level = .95),
+    resid_response_log = resid(model4)
+  )
+```
+
+# Visualization
+
+From my examination of the top performing model coefficients, I got the sense that region is very important, as are some of the sentiment variables. Let's look:
+
+## Region x `xw_01`
+
+### Model 3
+
+```{r}
+df_model3 %>%
+  ggplot(mapping = aes(x = xw_01, y = resid_response_log)) +
+  geom_point() + 
+  facet_wrap(~ region)
+```
+
+In general, in regions `XX` and `YY`, low values of the sentiment predictor `xw_01` lead to better predictions. However, in region `ZZ`, this seems less true, since there are more large residuals at low values of `xw_01`.
+
+### Model 4
+
+```{r}
+df_model4 %>%
+  ggplot(mapping = aes(x = xw_01, y = resid_response_log)) +
+  geom_point() + 
+  facet_wrap(~ region) +
+  ggtitle("Model 4: region + xw01")
+```
+
+Model 4's surface for these two variables looks very similar to model 3's. 
+
+## `customer`, `region`, and a sentiment predictor
+
+Model 3 has both customer and region and ranks `xw_01` highly in variable importance. Let's see what all that looks like together.
+
+```{r}
+df_model3 %>%
+  ggplot(mapping = aes(x = xw_01, y = resid_response_log)) +
+  geom_point() + 
+  facet_grid(region ~ customer, scales = "free") +
+  ggtitle("Model 3: region + customer + xw01")
+```
+
+For region `YY`, it looks as though median-adjacent values of the `xw_01` predictor result in low error, while extreme values relate to the residual linearly (low values)

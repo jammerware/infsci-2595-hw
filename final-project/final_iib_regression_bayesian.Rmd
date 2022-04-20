@@ -192,7 +192,7 @@ bayesian_model4 %>%
   pull(sigma) %>%
   quantile(c(.05, .5, .95))
 ```
-## How certain are we?
+## Precision on the posterior $\sigma$: How certain are we?
 
 The values on the posterior noise are relatively high (with the 50th quantile at `0.312`), so we are somewhat uncertain.
 
@@ -205,5 +205,4 @@ frequentist_model4 %>%
   summary
 ```
 
-## Precision on the posterior $\sigma$
-
+If "Residual standard error" here is the MLE on sigma (**.3029**), then it's very close to the median of the posterior distribution on sigma from the Bayesian model (**0.3121201**).

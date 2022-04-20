@@ -1,0 +1,402 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiD: Tuning and advanced regression models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I train and tune advanced regression models. In the the next, I evaluate the performance of these models against each other by various metrics.
+
+**NOTE:** In most cases, I run each model using `caret`'s default tuning grid and then re-run with a tuning grid based on those results. The untuned model is labeled with `_untuned`. 
+
+## Outstanding questions
+
+- Can we tune purely linear frequentist models?
+- Is it okay to replace my top performing model from iiA because one of the required models here is identical?
+- Are the warnings I have below with model 2 my fault, and if so, what should I do?
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(caret)
+library(doParallel)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(-outcome_numeric)
+
+df %>% glimpse
+```
+
+## Utility functions
+
+For all models, I perform 5-fold cross validation repeated 5 times and use RMSE as the performance metric to target.
+
+```{r}
+my_supertrain <- function(formula, data, method = "lm", parallelize = TRUE, ...) {
+  if (parallelize == TRUE) {
+    parallel_cluster <- makeCluster(detectCores() - 1)
+    registerDoParallel(parallel_cluster) 
+  }
+  
+  out <- tryCatch(
+    {
+      model <- train(
+        formula,
+        data = data,
+        method = method,
+        preProcess = c("center", "scale"),
+        metric = "RMSE",
+        trControl = trainControl(
+          method = "repeatedcv",
+          number = 5,
+          repeats = 5
+        ),
+        ...
+      )
+      
+      model   
+    },
+    error = function(cond) {
+      message(paste("Error in supertrain:", cond))
+      return(NULL)
+    },
+    warning = function(cond) {
+      message(paste("Warning in supertrain:", cond))
+      return(NULL)
+    },
+    finally = {
+      if (exists("parallel_cluster")) {
+        stopCluster(parallel_cluster)
+      }
+    }
+  )
+  
+  return(out)
+}
+```
+
+I'm also saving every model produced here for evaluation in the next document.
+
+```{r}
+save_model <- function(filename, model) {
+  readr::write_rds(model, paste("./models/adv_reg_", filename ,".rds", sep = ""))
+}
+```
+
+
+# Modeling
+
+## Model 1: All categorical/continuous inputs (Linear additive)
+
+```{r}
+model1 <- my_supertrain(
+  response_log ~ .,
+  data = df
+)
+
+save_model("model1_lm_all", model1)
+```
+
+## Model 2: 
+
+**QUESTION:** Why does this model interact region with customer and the other inputs?
+
+```{r}
+model2 <- my_supertrain(
+  response_log ~ (region + customer) + (.^2),
+  data = df
+)
+
+save_model("model2_lm_continuous_interact", model2)
+```
+
+## Model 3: First model selected in iiA (model 7 in that document)
+
+**NOTE:** In iiA, my top two performing models were 3 and 4, and 3 is identical to model 1 in this document (all features, linear additive). I'll replace it with model 7 from iiA, which was my third-best model.
+
+```{r}
+model3_formerly7 <- my_supertrain(
+  formula = response_log ~ region +
+    customer +
+    I(xa_02^2) +
+    I(xb_04^2) +
+    I(xb_07^2) +
+    I(xb_08^2) +
+    I(xn_04^2) +
+    I(xn_05^2) +
+    I(xn_08^2) +
+    I(xw_01^2),
+  data = df
+)
+
+save_model("model3_lm_my_custom", model3_formerly7)
+```
+
+## Model 4: Second model selected in iiA (which was also model 4 in that document)
+
+```{r}
+model4 <- my_supertrain(
+  response_log ~ region * ., 
+  data = df %>%
+    select(where(is.numeric), region))
+
+save_model("model4_lm_continuous_and_region", model4)
+```
+
+## Model 5: Regularized regression with Elastic net (All pairwise continuous, additive categorical features)
+
+```{r}
+model5 <- my_supertrain(
+  formula = response_log ~ region + customer + .^2,
+  data = df,
+  method = "glmnet"
+  # TODO: TUNE
+)
+
+save_model("model5_lm_enet", model5)
+```
+
+## Model 6: Regularized regression with Elastic net (the more complex of the 2 models selected from iiA)
+
+In iiA, I chose models 3 and 4  as the best performers, which are relatively simple models that were prescribed by the assignment. Thus, here, I tune the more complicated model 7, which was third-best and is a (slightly) more complicated.
+
+```{r}
+model6_untuned <- my_supertrain(
+  formula = response_log ~ region +
+    customer +
+    I(xa_02^2) +
+    I(xb_04^2) +
+    I(xb_07^2) +
+    I(xb_08^2) +
+    I(xn_04^2) +
+    I(xn_05^2) +
+    I(xn_08^2) +
+    I(xw_01^2),
+  data = df,
+  method = "glmnet"
+)
+```
+
+To tune this model, I run it without the grid and use its values of alpha and lambda to create a tuning grid.
+
+```{r}
+model6_untuned$results
+```
+
+Now we can run it again with a custom tuning grid:
+
+```{r}
+model6 <- my_supertrain(
+  formula = response_log ~ region +
+    customer +
+    I(xa_02^2) +
+    I(xb_04^2) +
+    I(xb_07^2) +
+    I(xb_08^2) +
+    I(xn_04^2) +
+    I(xn_05^2) +
+    I(xn_08^2) +
+    I(xw_01^2),
+  data = df,
+  method = "glmnet",
+  tuneGrid = expand.grid(
+    alpha = seq(0.1, 0.9, length.out = 9),
+    lambda = seq(min(model6_untuned$results$lambda), max(model6_untuned$results$lambda), length.out = 30)
+  )
+)
+
+save_model("model6_lm_enet_my_custom", model6)
+```
+
+
+## Model 7: A neural net
+
+I included all predictors here and did a simple one-layer neural net. First, I run the model with the default tune grid.
+
+```{r}
+model7_untuned <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "nnet",
+  trace = FALSE
+)
+```
+
+Let's look at the results so we can tune semi-intelligently:
+
+```{r}
+model7_untuned
+```
+
+It looks like the default tuning grid stops at 5 units? Let's try more and play with tuning `decay`.
+
+```{r}
+model7 <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "nnet",
+  trace = FALSE,
+  tuneGrid = expand.grid(
+    size = 1:10,
+    decay = seq(0, 1, length.out = 10)
+  )
+)
+
+save_model("model7_nnet", model7)
+```
+
+## Model 8: Random forest
+
+Once again, we start without a tuning grid:
+
+```{r}
+model8_untuned <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "rf"
+)
+```
+
+Let's look at our default results:
+
+```{r}
+model8_untuned
+```
+
+`mtry` at 22 seems to cause the best metrics. Let's look around there a little bit.
+
+```{r}
+model8 <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "rf",
+  tuneGrid = expand.grid(
+    mtry = 15:29
+  )
+)
+
+save_model("model8_rf", model8)
+```
+
+## Model 9 : Gradient boosted tree (XGBoost)
+
+Same deal as before: we'll run with the default tuning grid and then tune parameters.
+
+```{r}
+model9_untuned <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "xgbTree"
+)
+```
+
+```{r}
+model9_untuned
+```
+
+```{r}
+model9 <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "xgbTree",
+  tuneGrid = expand.grid(
+    eta = seq(0.1, 0.6, by = 0.1),
+    # gamma = c(0, 0.5, 0.9),
+    gamma = 1,
+    max_depth = 1:5,
+    # min_child_weight = c(1, 2),
+    min_child_weight = 1,
+    colsample_bytree = seq(0.5, 0.8, by = 0.05),
+    subsample = seq(0.5, 1, by = 0.1),
+    nrounds = c(50, 100, 150)
+  )
+)
+
+save_model("model9_xgb", model9)
+```
+
+## Model 10: Freestyle choice 1 - Support Vector Machines (SVM) with RBF
+
+```{r}
+model10_untuned <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "svmRadial"
+)
+```
+
+Let's examine the default tuning results.
+
+```{r}
+model10_untuned
+```
+
+And tune:
+
+```{r}
+model10 <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "svmRadial",
+  tuneGrid = expand.grid(
+    C = seq(0.1, 1, by = 0.1),
+    sigma = seq(0.01, 0.1, length.out = 25)
+  )
+)
+
+save_model("model10_svm_rbf", model10)
+```
+
+## Model 11: Freestyle choice 2 - KNN
+
+First, a default-tuned version:
+
+```{r}
+model11_untuned <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "knn"
+)
+```
+
+Let's look at the results:
+
+```{r}
+model11_untuned
+```
+
+The only parameter to tune is `k` (the number of neighbors whose values are considered in prediction), so let's tune it.
+
+```{r}
+model11 <- my_supertrain(
+  response_log ~ .,
+  data = df,
+  method = "knn",
+  tuneGrid = expand.grid(
+    k = 3:15
+  )
+)
+
+save_model("model11_knn", model11)
+```
+
+# Model comparison
