@@ -1,0 +1,379 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiiD: Tuning and advanced classification models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I train and tune advanced classification models. In the the next, I evaluate the performance of these models against each other by various metrics.
+
+**NOTE:** In most cases, I run each model using `caret`'s default tuning grid and then re-run with a tuning grid based on those results. The untuned model is labeled with `_untuned`. 
+
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(caret)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(outcome_to_numeric = FALSE) %>%
+  select(-response_log)
+
+df %>% glimpse
+```
+
+## Utility functions
+
+For all models, I perform 5-fold cross validation repeated 5 times and use ROC as the performance metric to target.
+
+```{r}
+supertrain_classification_info <- list(
+  metric = "ROC",
+  ctrl = trainControl(
+    method = "repeatedcv", 
+    repeats = 5, 
+    number = 5,
+    classProbs = TRUE,
+    savePredictions = TRUE,
+    summaryFunction = twoClassSummary
+  )
+)
+```
+
+
+I'm also saving every model produced here for evaluation in the next document.
+
+# Modeling
+
+## Model 1: All inputs, linear additive
+
+```{r}
+class_model1 <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "glm",
+  family = "binomial",
+  info = supertrain_classification_info
+)
+
+save_model("model1", class_model1, prefix = "adv_class_")
+```
+
+
+## Model 2: All pairwise interactions of continuous inputs, include additive categorical features
+
+```{r}
+class_model2 <- my_supertrain(
+  outcome ~ region + customer + (. -region -customer)^2,
+  data = df,
+  method = "glm",
+  family = "binomial",
+  info = supertrain_classification_info
+)
+
+save_model("model2", class_model2, prefix = "adv_class_")
+```
+
+## Model 3: Best-performing model from iiiA (Model 9 in that document)
+
+**NOTE:** my best-performing model from iiiA is identical to Model 1 in this document. Thus, I chose my second and third-best models.
+
+```{r}
+df_class_model3 <- df %>%
+  select(-region, -customer)
+
+class_model3_formula_terms <- paste("I(", names(df_class_model3) %>% head(-1) ,"^3)", sep = "")
+class_model3_formula <- as.formula(paste("outcome ~", paste(class_model3_formula_terms, collapse = "+")))
+
+class_model3 <- my_supertrain(
+  class_model3_formula,
+  data = df_class_model3,
+  method = "glm",
+  info = supertrain_classification_info
+)
+
+save_model("model3_cubic_sentiment", class_model3, prefix = "adv_class_")
+```
+
+## Model 4: Second-best-performing model from iiiA (Model 2 in that document)
+
+```{r}
+class_model4 <- my_supertrain(
+  outcome ~ .,
+  data = df %>% select(where(is.numeric), outcome),
+  method = "glm",
+  family = "binomial",
+  info = supertrain_classification_info
+)
+
+save_model("model4_continuous_linear", class_model4, prefix = "adv_class_")
+```
+
+## Model 5: Pairwise continuous inputs with categorical features (Elasticnet)
+
+### Default tune
+
+```{r}
+class_model5_untuned <- my_supertrain(
+  outcome ~ region + customer + (. -region -customer)^2,
+  data = df,
+  method = "glmnet",
+  info = supertrain_classification_info
+)
+
+class_model5_untuned
+```
+
+### Tuned
+
+```{r}
+class_model5 <- my_supertrain(
+  outcome ~ region + customer + (. -region -customer)^2,
+  data = df,
+  method = "glmnet",
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    alpha = seq(.1, 1, by = .1),
+    lambda = seq(
+      min(class_model5_untuned$bestTune$lambda),
+      max(class_model5_untuned$bestTune$lambda),
+      length.out = 10
+    )
+  )
+)
+
+save_model("model5_pairwise_continues_linear_enet", class_model5, prefix = "adv_class_")
+```
+
+
+## Model 6: The more complex of the two models from iiiA (Elasticnet)
+
+### Default tune
+
+```{r}
+class_model6_untuned <- my_supertrain(
+  class_model3_formula,
+  data = df_class_model3,
+  method = "glmnet",
+  info = supertrain_classification_info
+)
+
+class_model6_untuned
+```
+
+### Tuned
+
+```{r}
+class_model6 <- my_supertrain(
+  class_model3_formula,
+  data = df_class_model3,
+  method = "glmnet",
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    alpha = seq(.1, 1, by = .1),
+    lambda = seq(
+      min(class_model6_untuned$bestTune$lambda),
+      max(class_model6_untuned$bestTune$lambda),
+      length.out = 10
+    )
+  )
+)
+
+save_model("model6_cubic_sentiment_enet", class_model6, prefix = "adv_class_")
+```
+
+
+## Model 7: Neural net
+
+### Default tunegrid
+
+```{r}
+class_model7_untuned <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "nnet",
+  info = supertrain_classification_info,
+  trace = FALSE
+)
+
+class_model7_untuned
+```
+
+### Tuned
+
+```{r}
+class_model7 <- my_supertrain(
+  class_model3_formula,
+  data = df,
+  method = "nnet",
+  trace = FALSE,
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    size = 1:10,
+    decay = seq(.1, .9, by = .1)
+  )
+)
+
+save_model("model7_nnet", class_model7, prefix = "adv_class_")
+```
+
+
+## Model 8: Random forest
+
+### Default tune
+
+```{r}
+class_model8_untuned <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "rf",
+  info = supertrain_classification_info
+)
+
+class_model8_untuned
+```
+
+### Tuned
+
+It looks like `mtry` was strongest around 22 (balancing ROC with sensitivity and specificity), so I search there.
+
+```{r}
+class_model8 <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "rf",
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    mtry = 15:29
+  )
+)
+
+save_model("model8_rf", class_model8, prefix = "adv_class_")
+```
+
+
+## Model 9: Gradient boosted tree (XGBoost)
+
+### Default tune
+
+```{r}
+class_model9_untuned <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "xgbTree",
+  info = supertrain_classification_info
+)
+
+class_model9_untuned
+```
+
+### Tuned
+
+Searching all of the parameters was too computationally expensive for my current gear, but I searched a few:
+
+```{r}
+class_model9 <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "xgbTree",
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    eta = seq(0.1, 0.6, by = 0.1),
+    # gamma = c(0, 0.5, 0.9),
+    gamma = 1,
+    max_depth = 1:5,
+    # min_child_weight = c(1, 2),
+    min_child_weight = 1,
+    colsample_bytree = seq(0.4, 0.9, by = 0.05),
+    subsample = seq(0.5, 1, by = 0.1),
+    nrounds = c(50, 100, 150)
+  )
+)
+
+save_model("model9_xgb", class_model9, prefix = "adv_class_")
+```
+
+
+## Model 10: Support Vector Machines (SVM) with RBF
+
+### Untuned
+
+```{r}
+class_model10_untuned <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "svmRadial",
+  info = supertrain_classification_info
+)
+
+class_model10_untuned
+```
+
+### Tuned
+
+```{r}
+class_model10 <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "svmRadial",
+  info = supertrain_classification_info,
+  tuneGrid <- expand.grid(
+    C = seq(.1, 1, by = .1),
+    sigma = seq(.01, .1, by = .005)
+  )
+)
+
+save_model("model10_svm", class_model10, prefix = "adv_class_")
+```
+
+## Model 11: K-nearest neighbors
+
+### Default tune
+
+```{r}
+class_model11_untuned <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "knn",
+  info = supertrain_classification_info
+)
+
+class_model11_untuned
+```
+
+### Tuned
+
+Once again, we can only tune K here, so let's find the best one.
+
+```{r}
+class_model11 <- my_supertrain(
+  outcome ~ .,
+  data = df,
+  method = "knn",
+  info = supertrain_classification_info,
+  tuneGrid = expand.grid(
+    k = 3:12
+  )
+)
+
+save_model("model11_knn", class_model11, prefix = "adv_class_")
+```
+

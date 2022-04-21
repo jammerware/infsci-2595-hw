@@ -1,0 +1,76 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiiD2: Comparing tuned classification models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I compare the performance of all tuned classification models in order to identify the one that seems the best.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(caret)
+
+source("./tools.R")
+```
+
+
+## Load models
+
+```{r}
+all_cls_models <- list(
+  cls_model1_linear_all_inputs = load_model("adv_class_model1.rds"),
+  cls_model2_pairwise_continuous = load_model("adv_class_model2.rds"),
+  cls_model3_cubic_sentiment = load_model("adv_class_model3_cubic_sentiment.rds"),
+  cls_model4_sentiment = load_model("adv_class_model4_continuous_linear.rds"),
+  cls_model5_pairwise_enet = load_model("adv_class_model5_pairwise_continuous_linear_enet.rds"),
+  cls_model6_cubic_sentiment_enet = load_model("adv_class_model6_cubic_sentiment_enet.rds"),
+  cls_model7_nnet = load_model("adv_class_model7_nnet.rds"),
+  cls_model8_rf = load_model("adv_class_model8_rf.rds"),
+  cls_model9_xgb = load_model("adv_class_model9_xgb.rds"),
+  cls_model10_svm = load_model("adv_class_model10_svm.rds"),
+  cls_model11_knn = load_model("adv_class_model11_knn.rds")
+)
+
+adv_class_model_results <- resamples(all_cls_models)
+```
+
+# Model performance
+
+## ROC/Sensitivity/specificity
+
+```{r}
+dotplot(adv_class_model_results, main = "Tuned classification models: results")
+```
+
+It's a pretty tight race. Conducting a "visual average" of the three statistics, it looks to me like models 1, 3, 4, and 7 have the best performance based on these. The low sensitivity of all models concerns me. I suspect it's related to the original dataset being unbalanced with respect to the outcome, but depending on the use case, models with low sensitivity may be less useful. If I were forced to pick a winner (which I will be later), I'm leaning toward model 7 (which is the neural net), as it has the best ROC and has good specificity while leaning a little more toward sensitivity.
+
+## AIC
+
+Let's look at the AIC of leading models to help us decide. I can't find a generalized version of AIC that works for neural nets, but we can do the other three, I guess.
+
+```{r}
+leading_cls_models <- list(
+  cls_model1 = all_cls_models$cls_model1_linear_all_inputs$finalModel,
+  cls_model3 = all_cls_models$cls_model3_cubic_sentiment$finalModel,
+  cls_model4 = all_cls_models$cls_model4_sentiment$finalModel
+)
+
+leading_cls_models %>% purrr::map(AIC)
+```
+
+These are all quite close to one another, though I'm not sure if there good in an absolute sense, and I don't know how to compare them to the neural net. 

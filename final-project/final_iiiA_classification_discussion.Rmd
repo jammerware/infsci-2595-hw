@@ -26,3 +26,10 @@ library(tidyverse)
 
 source("./tools.R")
 ```
+
+## Loading models trained in the previous doc:
+
+```{r}
+
+```
+

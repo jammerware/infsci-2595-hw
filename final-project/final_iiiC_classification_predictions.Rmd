@@ -1,0 +1,71 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiiC: Classification model predictions"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I make predictions with my two top-performing classification models in order to understand trends between the predictors, the predicted outcome, and the inputs.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(outcome_to_numeric = FALSE) %>%
+  select(-response_log)
+
+df %>% glimpse()
+```
+
+# Model analysis
+
+A quick utility function to create data about the predictions from each model:
+
+```{r}
+get_pred_df <- function(model) {
+  preds <- predict(model, newdata = df)
+}
+```
+
+
+## Model 9
+
+I chose model 9 from the GLM section (iiA), because it has the most personality and serviceable stats. Let's load it and predict probabilities.
+
+```{r}
+glm_model9 <- load_model("simple_cls_model9.rds")
+
+glm_model9_pred_outcome <- predict(glm_model9, newdata = df)
+df_glm_model9_pred <- tibble::tibble(
+  probability = predict(glm_model9, newdata = df, type = "prob")[,1],
+  pred = predict(glm_model9, newdata = df),
+  observed = df$outcome
+)
+
+df_glm_model9_pred
+```
+
+### Calibration curve
+
+```{r}
+calibration_plot(data = df_glm_model9_pred, obs = observed, pred = pred)
+```
+

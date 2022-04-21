@@ -4,6 +4,9 @@ subtitle: "Part IIIa: Classification (simple models"
 author: "Ben Stein"
 date: "3/23/2022"
 output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +16,23 @@ knitr::opts_chunk$set(echo = TRUE)
 # About this document
 
 In this document, I fit simple classification models to predict the `outcome` variable.
+
+# Open questions
+
+- What do i do with:
+
+```
+Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+and 
+
+```
+Warning in predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from a rank-deficient fit may be misleading
+```
+
+?
 
 # Setup
 
@@ -136,7 +156,7 @@ glm_model7_significant_predictors <- glm_model3_coef %>%
   rename(p = 4) %>%
   filter(p < .05)
 
-model7_significant_predictors$predictor
+glm_model7_significant_predictors$predictor
 ```
 
 I'll use these predictors with a parabolic basis function:
@@ -204,34 +224,48 @@ glm_model9 <- train_glm(
 
 # Comparison
 
+I'll examine a couple of statistics to help me decide which of these seems best. 
+
 ```{r}
-model_results <- resamples(
-  list(
-    fit_1 = glm_model1,
-    fit_2 = glm_model2,
-    fit_3 = glm_model3,
-    fit_4 = glm_model4,
-    fit_5 = glm_model5,
-    fit_6 = glm_model6,
-    fit_7 = glm_model7,
-    fit_8 = glm_model8,
-    fit_9 = glm_model9
-  )
+all_glm_models <- list(
+  fit_1 = glm_model1,
+  fit_2 = glm_model2,
+  fit_3 = glm_model3,
+  fit_4 = glm_model4,
+  fit_5 = glm_model5,
+  fit_6 = glm_model6,
+  fit_7 = glm_model7,
+  fit_8 = glm_model8,
+  fit_9 = glm_model9
 )
+
+model_results <- resamples(all_glm_models)
 ```
 
-## Accuracy
+## ROC, Sensitivty, and Specificity
 
 ```{r}
-dotplot(model_results, "accuracy")
+dotplot(model_results)
 ```
 
-**NOTES:** 1 has strong accuracy and low kappa, suggesting that the model isn't guessing randomly?
+Models 2, 3, and 9 have the best combination of these stats. Let's how AIC stacks up:
 
-## ROC
+## AIC
 
 ```{r}
-dotplot(model_results, metric = "ROC")
+tibble::tibble(
+  model = names(all_glm_models),
+  aic = purrr::map_dbl(all_glm_models, function(x) AIC(x$finalModel))
+) %>%
+  ggplot(mapping = aes(x = model, y = aic)) + 
+  geom_col()
 ```
 
+Our leading models all have relatively equivalent AICs, so my guess is that it's dealer's choice between these three. Saving them for later:
+
+```{r}
+save_model("simple_cls_model2", glm_model2)
+save_model("simple_cls_model3", glm_model3)
+save_model("simple_cls_model9", glm_model9)
+```
 

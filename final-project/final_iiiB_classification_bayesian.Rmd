@@ -1,0 +1,308 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiiC: Bayesian Classification Models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I evaluate two Bayesian regression models based on findings from the simple frequentist modeling done in the previous section.
+
+**NOTE**: This document makes extensive use of code published on the course Canvas for using `rstanarm` and comparing Bayesian models.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(rstanarm)
+
+# set rstanarm options
+options(mc.cores = parallel::detectCores())
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(outcome_to_numeric = FALSE, center_and_scale = TRUE) %>%
+  select(-response_log)
+
+df %>% glimpse()
+```
+
+# Modeling
+
+For both models, I'll first try a weak prior and then a stronger one. I also display the coefficient summaries for each model and discuss interpretation at the end of the document. 
+
+**NOTE:** This document relies on functions I define in `tools.R` for repeatable visualization of Bayesian coefficients. I wrote these functions myself, but one is heavily inspired by documentation from Canvas.
+
+## Model 3: Linear additive, all features
+
+Model 3 was my best-performing model in section iiiA, so I start with it. 
+
+### 3a: Weak prior
+
+```{r}
+bayesian_glm_model3_weak <- stan_glm(
+  outcome ~ .,
+  data = df,
+  family = binomial(link = "logit"),
+  # prior mean of 0, SD of 4 for the intercept and coefficients
+  prior = normal(0, 4),
+  prior_intercept = normal(0, 4), 
+  QR = TRUE, # no idea what this does, but the documentation says it's handy
+  seed = 2022
+)
+```
+
+#### Coefficients
+
+```{r}
+visualize_bayesian_coefficients(bayesian_glm_model3_weak)
+```
+
+#### Coefficients significantly different from zero
+
+```{r}
+get_significant_bayesian_coefficients(bayesian_glm_model3_weak)
+```
+
+### 3b: strong prior
+
+```{r}
+bayesian_glm_model3_strong <- stan_glm(
+  outcome ~ .,
+  data = df,
+  family = binomial(link = "logit"),
+  # prior mean of 0, SD of 1 for the intercept and coefficients
+  prior = normal(0, 1),
+  prior_intercept = normal(0, 1), 
+  seed = 2022
+)
+```
+
+#### Visualize coefficients
+
+```{r}
+visualize_bayesian_coefficients(bayesian_glm_model3_strong)
+```
+
+#### Coefficients significantly different from zero
+
+```{r}
+get_significant_bayesian_coefficients(bayesian_glm_model3_strong)
+```
+
+## Model 9: Cubic sentiment features
+
+Model 9 from section iiiA used cubic features for all sentiment variables. It had strong ROC performance and higher average sensitivity than Model 3 did. Plus it was my idea, which means I'm inordinately attached to it.
+
+Let's prepare the data and formula:
+
+```{r}
+df_bayesian_glm_model9 <- df %>%
+  select(-region, -customer)
+
+formula_terms <- paste("I(", names(df_bayesian_glm_model9) %>% head(-1) ,"^3)", sep = "")
+glm_model9_formula <- as.formula(paste("outcome ~", paste(formula_terms, collapse = "+")))
+glm_model9_formula
+```
+
+### Weak prior
+
+```{r}
+bayesian_glm_model9_weak <-  stan_glm(
+  glm_model9_formula,
+  data = df_bayesian_glm_model9,
+  family = binomial(link = "logit"),
+  # prior mean of 0, SD of 4 for the intercept and coefficients
+  prior = normal(0, 4),
+  prior_intercept = normal(0, 4), 
+  seed = 2022
+)
+```
+
+#### Visualize coefficients
+
+```{r}
+visualize_bayesian_coefficients(bayesian_glm_model9_weak)
+```
+
+```{r}
+get_significant_bayesian_coefficients(bayesian_glm_model9_weak)
+```
+
+### Strong prior
+
+```{r}
+bayesian_glm_model9_strong <-  stan_glm(
+  glm_model9_formula,
+  data = df_bayesian_glm_model9,
+  family = binomial(link = "logit"),
+  # prior mean of 0, SD of 1 for the intercept and coefficients
+  prior = normal(0, 1),
+  prior_intercept = normal(0, 1), 
+  seed = 2022
+)
+```
+
+#### Visualize coefficients
+
+```{r}
+visualize_bayesian_coefficients(bayesian_glm_model9_strong)
+```
+
+```{r}
+get_significant_bayesian_coefficients(bayesian_glm_model9_strong)
+```
+
+# Comparison
+
+I evaluate these models by computing posterior predictive probabilities and evaluating those. Some of this code is borrowed from a [helpful article on Github](https://avehtari.github.io/modelselection/diabetes.html)
+
+```{r}
+get_posterior_classification_accuracy <- function(model) {
+  linpred <- posterior_linpred(model)
+  preds <- posterior_epred(model)
+  pred <- colMeans(preds)
+  pr <- as.integer(pred >= 0.5)
+  
+  # mean(pr == as.integer(df$outcome))
+  # cbind(pr, ifelse(df$outcome == "event", 1, 0)
+  mean(xor(pr,as.integer(df$outcome==0)))
+}
+```
+
+## Accuracy
+
+### Model 3
+
+#### weak prior
+
+```{r}
+get_posterior_classification_accuracy(bayesian_glm_model3_weak)
+```
+#### strong prior
+
+```{r}
+get_posterior_classification_accuracy(bayesian_glm_model3_strong)
+```
+
+The strong prior seems to help.
+
+### Model 9
+
+#### Weak prior
+
+```{r}
+get_posterior_classification_accuracy(bayesian_glm_model9_weak)
+```
+
+#### Strong prior
+
+```{r}
+get_posterior_classification_accuracy(bayesian_glm_model9_strong)
+```
+
+By accuracy, the Bayesian formulation of model 9 is the stronger of the two, with the prior strength not helping a ton.
+
+## LOOIC
+
+I'll be transparent and say that I don't completely know the intricacies of what's happening here, but I found this in a vignette about `rstanarm` (available [here](https://mc-stan.org/rstanarm/articles/rstanarm.html)). From this, we can obtain a statistic that is apparently somewhat analogous to a frequentist model's AIC that does not assume the nature of the posterior distribution.
+
+Model 9 chokes when I try to compute LOOIC, so I only use it to discriminate between versions of model 3.
+
+### Model 3
+
+#### Weak prior
+
+```{r}
+loo(
+  bayesian_glm_model3_weak, 
+  save_psis = TRUE,
+  k_threshold = 0.7)
+```
+
+
+#### Strong prior
+
+```{r}
+loo(
+  bayesian_glm_model3_strong,
+  save_psis = TRUE,
+  k_threshold = 0.7)
+```
+
+This is inconclusive, since the standard error of the LOOIC statistic overlaps between the two models.
+
+## WAIC
+
+Since we need a way to compare complexity between models 3 and 9, I turned to WAIC.
+
+```{r}
+bayesian_glm_model3_weak$waic <- waic(bayesian_glm_model3_weak)
+bayesian_glm_model3_strong$waic <- waic(bayesian_glm_model3_strong)
+bayesian_glm_model9_weak$waic <- waic(bayesian_glm_model9_weak)
+bayesian_glm_model9_strong$waic <- waic(bayesian_glm_model9_strong)
+
+all_models <- stanreg_list(
+  bayesian_glm_model3_weak,
+  bayesian_glm_model3_strong,
+  bayesian_glm_model9_weak,
+  bayesian_glm_model9_strong,
+  model_names = c(
+    "Linear additive, all features (weak prior)", 
+    "Linear additive, all features (strong prior)", 
+    "Cubic sentiment features (weak prior)",
+    "Cubic sentiment features (strong prior)"
+  )
+)
+
+loo_compare(all_models, criterion = "waic")
+```
+
+This is an interesting toss-up. The standard error of the cubic models is quite large, and the standard error for the linear additive model with the weak prior barely overlaps with the standard error interval of the strong prior version of the cubic model. Because the predictive accuracy of Model 9 is not significantly better than that of Model 3, I'd choose model 3 with a strong prior as the overall winner (among Bayesian models).
+
+# Deeper look at the best model (Model 3, strong prior)
+
+## Coefficient distributions
+
+```{r}
+# options(repr.plot.width = 1, repr.plot.height = 5)
+as.data.frame(bayesian_glm_model3_strong) %>% 
+  tibble::as_tibble() %>% 
+  select(all_of(names(bayesian_glm_model3_strong$coefficients))) %>% 
+  tibble::rowid_to_column("post_id") %>% 
+  pivot_longer(!c("post_id")) %>% 
+  ggplot(mapping = aes(x = value)) +
+  geom_histogram(bins = 55) +
+  facet_wrap(~name, scales = "free") +
+  theme_bw() +
+  theme(axis.text.y = element_blank())
+```
+
+It's hard to see (I can't figure out how to resize facet grid stuff), but most parameters appear to have Gaussian posterior distributions. We can also examine posterior correlation among the variables:
+
+```{r}
+bayesian_glm_model3_strong %>%
+  tibble::as_tibble() %>% 
+  select(all_of(names(bayesian_glm_model3_strong$coefficients))) %>% 
+  cor %>%
+  corrplot::corrplot(type = "upper", method = "number")
+```
+
+This is a lot of predictors, but they mostly all seem to be contributing. There is high correlation with the intercept in some cases.
+
+

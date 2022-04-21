@@ -105,4 +105,4 @@ df_model3 %>%
   ggtitle("Model 3: region + customer + xw01")
 ```
 
-For region `YY`, it looks as though median-adjacent values of the `xw_01` predictor result in low error, while extreme values relate to the residual linearly (low values)
+For region `YY`, it looks as though median-adjacent values of the `xw_01` predictor result in low error, while extreme values relate to the residual linearly (low values of the sentiment predictor result in less error). This association is not strong, however.

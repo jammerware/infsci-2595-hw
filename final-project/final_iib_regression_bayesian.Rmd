@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part IIb: Bayesian Regression Models"
+subtitle: "Part iiB: Bayesian Regression Models"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -156,6 +156,7 @@ all_models <- stanreg_list(
 
 loo_compare(all_models, criterion = "waic")
 ```
+
 This is inconclusive since the actual difference between the models is less than the standard error.
 
 I start by looking at the posterior intervals on the variables to see which ones seem significant.
@@ -171,14 +172,12 @@ Because model 4 (the second model evaluated here) has slightly higher R^2, sligh
 Let's start by visualizing the coefficients of the model:
 
 ```{r}
-plot(bayesian_model4, pars = names(bayesian_model4$coefficients)) + 
-  geom_vline(xintercept = 0, color = "grey", linetype = "dashed", size = 1.) +
-  theme_bw()
+visualize_bayesian_coefficients(bayesian_model4)
 ```
-We can also look at the actual posterior intervals for each feature:
+We can also look at the actual posterior intervals for each feature, especially for features that are significant at 95%.
 
 ```{r}
-posterior_interval(bayesian_model4)
+get_significant_bayesian_coefficients(bayesian_model4)
 ```
 
 ## Quantiles for R^2 and noise
@@ -192,17 +191,31 @@ bayesian_model4 %>%
   pull(sigma) %>%
   quantile(c(.05, .5, .95))
 ```
-## Precision on the posterior $\sigma$: How certain are we?
-
-The values on the posterior noise are relatively high (with the 50th quantile at `0.312`), so we are somewhat uncertain.
 
 ## Comparison to the MLE estimate from the frequentist model
 
-```{r}
-frequentist_model4 <- readr::read_rds("./models/lm_rank2_model4.rds")
+We can visualize the MLE estimate from the frequentist model with the distribution of posterior sigma samples to see how they compare:
 
-frequentist_model4 %>%
-  summary
+```{r}
+bayesian_model4 %>%
+  as.data.frame %>%
+  as_tibble %>%
+  ggplot(mapping = aes(x = sigma)) + 
+  geom_histogram(bins = 60) + 
+  geom_vline(xintercept = sigma(frequentist_model4$finalModel), color = "lightblue", linetype = "dashed", size = 2) +
+  geom_vline(mapping = aes(xintercept = median(sigma)), color = "gold", linetype="dashed", size = 2)
 ```
 
-If "Residual standard error" here is the MLE on sigma (**.3029**), then it's very close to the median of the posterior distribution on sigma from the Bayesian model (**0.3121201**).
+As the figure shows, MLE on the noise from the standard `lm` model is within the margin of error for the posterior distribution of sigma in the Bayesian model.
+
+## Precision on the posterior $\sigma$: How certain are we?
+
+```{r}
+bayesian_model4 %>%
+  as.data.frame %>%
+  as_tibble %>%
+  pull(sigma) %>%
+  sd
+```
+
+The standard deviation of the posterior samples on sigma is very low, suggesting that we're pretty sure that our estimation of the amount of noise is accurate.

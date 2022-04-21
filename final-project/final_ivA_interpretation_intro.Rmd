@@ -1,0 +1,28 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part ivA: Interpretation (Intro)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I begin interpreting my results. I identify the strongest models for regression and classification, examine and compare their variables, and attempt to answer the question of whether the sentiment-based variables are useful in predicting the outputs.
+
+# Best models
+
+## Regression
+
+## Classification
+
+# Variable comparison
+
+# Are the sentiment variables useful?

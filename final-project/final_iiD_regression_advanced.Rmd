@@ -19,12 +19,6 @@ In this document, I train and tune advanced regression models. In the the next, 
 
 **NOTE:** In most cases, I run each model using `caret`'s default tuning grid and then re-run with a tuning grid based on those results. The untuned model is labeled with `_untuned`. 
 
-## Outstanding questions
-
-- Can we tune purely linear frequentist models?
-- Is it okay to replace my top performing model from iiA because one of the required models here is identical?
-- Are the warnings I have below with model 2 my fault, and if so, what should I do?
-
 # Setup (libraries and tools)
 
 ## Libraries and tools
@@ -81,10 +75,6 @@ my_supertrain <- function(formula, data, method = "lm", parallelize = TRUE, ...)
       message(paste("Error in supertrain:", cond))
       return(NULL)
     },
-    warning = function(cond) {
-      message(paste("Warning in supertrain:", cond))
-      return(NULL)
-    },
     finally = {
       if (exists("parallel_cluster")) {
         stopCluster(parallel_cluster)
@@ -104,7 +94,6 @@ save_model <- function(filename, model) {
 }
 ```
 
-
 # Modeling
 
 ## Model 1: All categorical/continuous inputs (Linear additive)
@@ -118,13 +107,11 @@ model1 <- my_supertrain(
 save_model("model1_lm_all", model1)
 ```
 
-## Model 2: 
-
-**QUESTION:** Why does this model interact region with customer and the other inputs?
+## Model 2: All pairwise interactions of continuous inputs, include additive categorical features
 
 ```{r}
 model2 <- my_supertrain(
-  response_log ~ (region + customer) + (.^2),
+  response_log ~ region + customer + (. -region -customer)^2,
   data = df
 )
 
@@ -342,7 +329,8 @@ save_model("model9_xgb", model9)
 model10_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
-  method = "svmRadial"
+  method = "svmRadial",
+  info = supertrain_classification_info
 )
 ```
 
@@ -356,9 +344,10 @@ And tune:
 
 ```{r}
 model10 <- my_supertrain(
-  response_log ~ .,
+  outcome ~ .,
   data = df,
   method = "svmRadial",
+  info = supertrain_classification_info,
   tuneGrid = expand.grid(
     C = seq(0.1, 1, by = 0.1),
     sigma = seq(0.01, 0.1, length.out = 25)
@@ -376,7 +365,8 @@ First, a default-tuned version:
 model11_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
-  method = "knn"
+  method = "knn",
+  info = supertrain_classification_info
 )
 ```
 
@@ -393,6 +383,7 @@ model11 <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "knn",
+  info = supertrain_classification_info,
   tuneGrid = expand.grid(
     k = 3:15
   )
