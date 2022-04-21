@@ -1,0 +1,57 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part 0: Intro and index"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+# Introduction
+
+I took your advice and made the project quite modular. Because there are several documents, I thought it'd be useful to create an index that presents the structure of the project and allows easy navigation. Hope it helps.
+
+## A transparent note
+
+I suspect it will be very obvious when you grade my submission that there are key concepts that I don't have a good handle on despite the fact that they were covered in detail in the course. I did my best, but I realized about a month into the class that I don't have the foundational skills necessary to succeed as the course is designed. Because of this, I tried to be as transparent as possible in portions of the project where I feel out of my depth. These are mostly to do with EDA, interpreting Bayesian models, and anything beyond basic comparison of model performance with metrics like RMSE/R^2 for regression and AUC for classification models.
+
+I feel like I learned quite a bit from the class, but if the requirement of the project is to demonstrate command of what we've learned - well, I'm not able to do that. I just wanted to be clear about why my submission is ugly.
+
+That said, on with the show.
+
+## Outline
+
+- Part I: Exploratory Data Analysis
+  - Target variables
+    - [`response` (regression target)](./iA_y_response.html)
+    - [`outcome` (classification target)](./iA_y_outcome.html)
+  - Predictors
+    - [Categoricals (`region` and `customer`)](./iA_x_categorical.html)
+    - Sentiment-based predictors
+      - [AFINN lexicon](./iA_x_xa.html)
+      - [Bing lexicon](./iA_x_xb.html)
+      - [NRC lexicon](./iA_x_xn.html)
+      - [SentimentR](./iA_x_xs.html)
+      - [Word count features](./iA_x_xw.html)
+- Part II: Regression
+  - Simple regression (lm) models
+    - [Model fitting](iiA_regression_simple.html)
+    - [Discussion/evaluation](./iiA_regression_discussion.html)
+  - [Bayesian regression models](./iiB_regression_bayesian.html)
+  - [Prediction-based evaluation](./iiC_regression_predictions.html)
+  - [Tuning regression models](./iiD_regression_tuning.html)
+- Part III: Classification
+  - Simple classification (glm) models
+    - [Model fitting](./iiiA_classification_simple.html)
+    - [Discussion/evaluation](./iiiA_classification_discussion.html)
+  - [Bayesian classification models](./iiiB_classification_bayesian.html)
+  - [Prediction-based evaluation](./iiiC_classification_predictions.html)
+  - Tuning classification models
+    - [Model fitting](./iiiD_classification_tuning.html)
+    - [Discussion/evaluation](./iiiD_classification_tuning_discussion.html)
+- Part IV: Interpretation and conclusions
+  - [Introduction](./ivA_interpretation_intro.html)
+  - [Identifying Hardest-to-predict customers](./ivB_hard_to_predict_identify.html)
+  - [Visualizing hardest-to-predict customers](./ivC_hard_to_predict_visualize.html)

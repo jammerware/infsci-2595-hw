@@ -1,8 +1,8 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part IIa: Regression models"
+subtitle: "Part iiA: Regression models"
 author: "Ben Stein"
-date: "4/13/2022"
+date: "4/27/2022"
 output: html_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # About this document
 
-In this document, I fit nine regression models and evaluate them against the training data. In Part IId, I choose the best of these models for additional tuning and validation against a test set.
+In this document, I fit nine regression models and evaluate them against the training data. In Part iiD, I choose the best of these models for additional tuning and validation against a test set.
 
 # Setup (libraries and tools)
 
@@ -24,7 +24,7 @@ In this document, I fit nine regression models and evaluate them against the tra
 ```{r}
 library(tidyverse)
 library(caret)
-library(jtools)
+# library(jtools)
 
 source("./tools.R")
 ```

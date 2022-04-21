@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Predictors (Lexicon: AFINN)"
+subtitle: "Part iA: Predictors (Lexicon: AFINN)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -51,7 +51,7 @@ Note the differing scales of the variables - we'll probably want to center and s
 visualize_distributions(df, "xa")
 ```
 
-While all variables are loosely gaussian, some are more Gaussian than others (e.g. `xa_02` through `xa_05`).
+While all variables are loosely Gaussian, some are more Gaussian than others (e.g. `xa_02` through `xa_05`).
 
 ## Distinct values
 
@@ -74,13 +74,6 @@ Let's see if any of these inputs are correlated with one another or with the res
 
 ```{r}
 visualize_correlations(df, "xa")
-# df %>%
-#   select(
-#     starts_with("xa"), 
-#     response_log
-#   ) %>%
-#   cor() %>%
-#   corrplot::corrplot(type = "upper")
 ```
 
 There is at least moderate correlation among several variables. 

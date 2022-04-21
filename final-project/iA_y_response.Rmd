@@ -1,9 +1,12 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Prediction targets (`response`)"
+subtitle: "Part iA: Prediction targets (`response`)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
 ---
 
 ```{r setup, include=FALSE}
@@ -27,7 +30,8 @@ source("./tools.R")
 ## Data
 
 ```{r}
-df <- load_project_data(list(convert_data_types = FALSE, response_to_log = FALSE))
+df <- load_project_data(convert_categoricals = FALSE, response_to_log = FALSE) %>%
+  select(-outcome_numeric)
 df %>% glimpse()
 ```
 
@@ -113,17 +117,18 @@ df %>%
   theme(axis.text.y = element_blank())
 ```
 
+This is one of those figures that I don't really know what to do with. The only trend I see is that combinations of regions and customers with small numbers of observations have distributions that are difficult to interpret (which doesn't surprise me anyway). Again we see that combinations with high numbers of observations are roughly Gaussian in distribution (after log transformation).
+
 ## In relation to continuous predictors
 
 Let's now visualize how `response` correlates with the continuous predictors from each group.
 
-### Lexicon: NRC
+### Lexicon: AFINN
 
 ```{r}
-df %>%
-  select(log_response, starts_with("xa")) %>%
-  cor %>%
-  corrplot::corrplot(type = "upper")
+visualize_correlations(df, "xa")
 ```
 
 Of the NRC lexicon variables, only `xa_01` and `xa_02` seem moderately correlated with `log_response`. It's important to notice that some of these predictors are also highly correlated with each other (e.g. `xa_04` is correlated with `xa_07` and `xa_08`, and with `xa_05` to a lesser extent.)
+
+# TODO: focus this on relationship to the outcome?

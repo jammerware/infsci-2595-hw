@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Predictors (categorical)"
+subtitle: "Part iA: Predictors (categorical)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -30,7 +30,7 @@ source("./tools.R")
 ## Data
 
 ```{r}
-df <- load_project_data(list(convert_data_types = TRUE, response_to_log = FALSE))
+df <- load_project_data(convert_categoricals = TRUE, response_to_log = FALSE)
 df %>% glimpse()
 ```
 

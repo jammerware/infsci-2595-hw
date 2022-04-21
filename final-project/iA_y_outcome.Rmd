@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Prediction targets (`outcome`)"
+subtitle: "Part iA: Prediction targets (`outcome`)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
