@@ -41,7 +41,9 @@ That said, on with the show.
     - [Discussion/evaluation](./iiA_regression_discussion.html)
   - [Bayesian regression models](./iiB_regression_bayesian.html)
   - [Prediction-based evaluation](./iiC_regression_predictions.html)
-  - [Tuning regression models](./iiD_regression_tuning.html)
+  - Tuning regression models
+    - [Model fitting](./iiD_regression_tuning.html)
+    - [Discussion](./iiD_regression_tuning_discussion.html)
 - Part III: Classification
   - Simple classification (glm) models
     - [Model fitting](./iiiA_classification_simple.html)

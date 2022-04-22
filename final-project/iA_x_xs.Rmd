@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Predictors (Lexicon: SentimentR)"
+subtitle: "Part iA: Predictors (Lexicon: SentimentR)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -73,10 +73,7 @@ In this group, variables have very similar numbers of total distinct values, so 
 Let's see if any of these inputs are correlated with one another or with the response variable.
 
 ```{r}
-df %>%
-  select(-outcome_numeric) %>%
-  cor() %>%
-  corrplot::corrplot(type = "upper")
+visualize_correlations(df, "xs")
 ```
 
 We can observe significant correlation between the predictors here - in particular, inputs 5 and 6 seem highly correlated with a few other inputs. Thus, they're probably good candidates to exclude in refined modeling.
@@ -109,4 +106,4 @@ df %>%
   facet_wrap(~ name, scales = "free")
 ```
 
-What I take from this is that this group is not as useful for predicting `outcome` as some of the other sentiment-based predictor groups, as there is not a clear trend bteween values of each predictor and the outcome.
+What I take from this is that this group is not as useful for predicting `outcome` as some of the other sentiment-based predictor groups, as there is not a clear trend between values of each predictor and the outcome.

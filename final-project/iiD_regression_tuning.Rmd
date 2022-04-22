@@ -26,7 +26,6 @@ In this document, I train and tune advanced regression models. In the the next, 
 ```{r}
 library(tidyverse)
 library(caret)
-library(doParallel)
 
 source("./tools.R")
 ```
@@ -45,45 +44,14 @@ df %>% glimpse
 For all models, I perform 5-fold cross validation repeated 5 times and use RMSE as the performance metric to target.
 
 ```{r}
-my_supertrain <- function(formula, data, method = "lm", parallelize = TRUE, ...) {
-  if (parallelize == TRUE) {
-    parallel_cluster <- makeCluster(detectCores() - 1)
-    registerDoParallel(parallel_cluster) 
-  }
-  
-  out <- tryCatch(
-    {
-      set.seed(2022)
-      
-      model <- train(
-        formula,
-        data = data,
-        method = method,
-        preProcess = c("center", "scale"),
-        metric = "RMSE",
-        trControl = trainControl(
-          method = "repeatedcv",
-          number = 5,
-          repeats = 5
-        ),
-        ...
-      )
-      
-      model   
-    },
-    error = function(cond) {
-      message(paste("Error in supertrain:", cond))
-      return(NULL)
-    },
-    finally = {
-      if (exists("parallel_cluster")) {
-        stopCluster(parallel_cluster)
-      }
-    }
+supertrain_regression_info <- list(
+  metric = "RMSE",
+  ctrl = trainControl(
+    method = "repeatedcv", 
+    repeats = 5, 
+    number = 5
   )
-  
-  return(out)
-}
+)
 ```
 
 I'm also saving every model produced here for evaluation in the next document.
@@ -101,7 +69,9 @@ save_model <- function(filename, model) {
 ```{r}
 model1 <- my_supertrain(
   response_log ~ .,
-  data = df
+  data = df,
+  method = "lm",
+  info = supertrain_regression_info
 )
 
 save_model("model1_lm_all", model1)
@@ -112,108 +82,110 @@ save_model("model1_lm_all", model1)
 ```{r}
 model2 <- my_supertrain(
   response_log ~ region + customer + (. -region -customer)^2,
-  data = df
+  data = df,
+  method = "lm",
+  info = supertrain_regression_info
 )
 
 save_model("model2_lm_continuous_interact", model2)
 ```
 
-## Model 3: First model selected in iiA (model 7 in that document)
-
-**NOTE:** In iiA, my top two performing models were 3 and 4, and 3 is identical to model 1 in this document (all features, linear additive). I'll replace it with model 7 from iiA, which was my third-best model.
+## Model 3: First model selected in iiA (model 5 in that document)
 
 ```{r}
-model3_formerly7 <- my_supertrain(
-  formula = response_log ~ region +
-    customer +
-    I(xa_02^2) +
-    I(xb_04^2) +
-    I(xb_07^2) +
-    I(xb_08^2) +
-    I(xn_04^2) +
-    I(xn_05^2) +
-    I(xn_08^2) +
-    I(xw_01^2),
-  data = df
+model3_formerly5 <- my_supertrain(
+  formula = response_log ~ customer * (.),
+  data = df %>% select(-region),
+  method = "lm",
+  info = supertrain_regression_info
 )
 
-save_model("model3_lm_my_custom", model3_formerly7)
+save_model("model3_lm_customer_interact_sentiment", model3_formerly5)
 ```
 
-## Model 4: Second model selected in iiA (which was also model 4 in that document)
+## Model 4: Second model selected in iiA (which was model 6 in that document)
 
 ```{r}
 model4 <- my_supertrain(
-  response_log ~ region * ., 
-  data = df %>%
-    select(where(is.numeric), region))
+  response_log ~ (.)^2, 
+  data = df %>% select(where(is.numeric)),
+  method = "lm",
+  info = supertrain_regression_info
+)
 
-save_model("model4_lm_continuous_and_region", model4)
+save_model("model4_lm_pairwise_sentiment", model4)
 ```
 
 ## Model 5: Regularized regression with Elastic net (All pairwise continuous, additive categorical features)
 
+### Default tune
+
+```{r}
+model5_untuned <- my_supertrain(
+  formula = response_log ~ region + customer + (. -region - customer ^2),
+  data = df,
+  method = "glmnet",
+  info = supertrain_regression_info
+)
+
+model5_untuned
+```
+
+### Tuned
+
 ```{r}
 model5 <- my_supertrain(
-  formula = response_log ~ region + customer + .^2,
+  formula = response_log ~ region + customer + (. -region - customer ^2),
   data = df,
-  method = "glmnet"
-  # TODO: TUNE
+  method = "glmnet",
+  info = supertrain_regression_info,
+  tuneGrid = expand.grid(
+    alpha = seq(0.05, 1, by = .05),
+    lambda = seq(
+      min(model5_untuned$results$lambda),
+      max(model5_untuned$results$lambda),
+      length.out = 10
+    )
+  )
 )
 
 save_model("model5_lm_enet", model5)
 ```
 
+
 ## Model 6: Regularized regression with Elastic net (the more complex of the 2 models selected from iiA)
 
-In iiA, I chose models 3 and 4  as the best performers, which are relatively simple models that were prescribed by the assignment. Thus, here, I tune the more complicated model 7, which was third-best and is a (slightly) more complicated.
+In iiA, I chose models 5 and 6 as the best performers. Model 6 includes pairwise interactions from all continuous inputs, so I deem it the more complex one.
 
 ```{r}
 model6_untuned <- my_supertrain(
-  formula = response_log ~ region +
-    customer +
-    I(xa_02^2) +
-    I(xb_04^2) +
-    I(xb_07^2) +
-    I(xb_08^2) +
-    I(xn_04^2) +
-    I(xn_05^2) +
-    I(xn_08^2) +
-    I(xw_01^2),
+  formula = response_log ~ (. -region -customer)^2, 
   data = df,
-  method = "glmnet"
+  method = "glmnet",
+  info = supertrain_regression_info
 )
+
+model6_untuned
 ```
 
-To tune this model, I run it without the grid and use its values of alpha and lambda to create a tuning grid.
-
-```{r}
-model6_untuned$results
-```
-
-Now we can run it again with a custom tuning grid:
 
 ```{r}
 model6 <- my_supertrain(
-  formula = response_log ~ region +
-    customer +
-    I(xa_02^2) +
-    I(xb_04^2) +
-    I(xb_07^2) +
-    I(xb_08^2) +
-    I(xn_04^2) +
-    I(xn_05^2) +
-    I(xn_08^2) +
-    I(xw_01^2),
+  formula = response_log ~ (. -region -customer)^2, 
   data = df,
   method = "glmnet",
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
-    alpha = seq(0.1, 0.9, length.out = 9),
-    lambda = seq(min(model6_untuned$results$lambda), max(model6_untuned$results$lambda), length.out = 30)
+    alpha = seq(0.05, 1, by = .05),
+    lambda = seq(
+      min(model6_untuned$results$lambda),
+      max(model6_untuned$results$lambda),
+      length.out = 10
+    )
   )
 )
 
-save_model("model6_lm_enet_my_custom", model6)
+save_model("model6_lm_enet_pairwise_sentiment", model6)
 ```
 
 
@@ -226,13 +198,10 @@ model7_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "nnet",
+  info = supertrain_regression_info,
   trace = FALSE
 )
-```
 
-Let's look at the results so we can tune semi-intelligently:
-
-```{r}
 model7_untuned
 ```
 
@@ -244,6 +213,7 @@ model7 <- my_supertrain(
   data = df,
   method = "nnet",
   trace = FALSE,
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
     size = 1:10,
     decay = seq(0, 1, length.out = 10)
@@ -261,13 +231,10 @@ Once again, we start without a tuning grid:
 model8_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
-  method = "rf"
+  method = "rf",
+  info = supertrain_regression_info,
 )
-```
 
-Let's look at our default results:
-
-```{r}
 model8_untuned
 ```
 
@@ -278,6 +245,7 @@ model8 <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "rf",
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
     mtry = 15:29
   )
@@ -294,11 +262,10 @@ Same deal as before: we'll run with the default tuning grid and then tune parame
 model9_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
-  method = "xgbTree"
+  method = "xgbTree",
+  info = supertrain_regression_info
 )
-```
 
-```{r}
 model9_untuned
 ```
 
@@ -307,6 +274,7 @@ model9 <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "xgbTree",
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
     eta = seq(0.1, 0.6, by = 0.1),
     # gamma = c(0, 0.5, 0.9),
@@ -330,13 +298,9 @@ model10_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "svmRadial",
-  info = supertrain_classification_info
+  info = supertrain_regression_info
 )
-```
 
-Let's examine the default tuning results.
-
-```{r}
 model10_untuned
 ```
 
@@ -347,7 +311,7 @@ model10 <- my_supertrain(
   outcome ~ .,
   data = df,
   method = "svmRadial",
-  info = supertrain_classification_info,
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
     C = seq(0.1, 1, by = 0.1),
     sigma = seq(0.01, 0.1, length.out = 25)
@@ -366,13 +330,9 @@ model11_untuned <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "knn",
-  info = supertrain_classification_info
+  info = supertrain_regression_info
 )
-```
 
-Let's look at the results:
-
-```{r}
 model11_untuned
 ```
 
@@ -383,7 +343,7 @@ model11 <- my_supertrain(
   response_log ~ .,
   data = df,
   method = "knn",
-  info = supertrain_classification_info,
+  info = supertrain_regression_info,
   tuneGrid = expand.grid(
     k = 3:15
   )
@@ -392,4 +352,6 @@ model11 <- my_supertrain(
 save_model("model11_knn", model11)
 ```
 
-# Model comparison
+# Conclusion
+
+In [the next document](./iiD_regression_tuning_discussion.html), we'll load up all these models and compare them to find the best ones.

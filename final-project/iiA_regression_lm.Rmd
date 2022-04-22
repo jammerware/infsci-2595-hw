@@ -1,0 +1,298 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiA: Regression models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I fit nine regression models and evaluate them against the training data. In Part iiD, I choose the best of these models for additional tuning and validation against a test set.
+
+# Setup (libraries and tools)
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+
+source("./tools.R")
+set.seed(2022)
+```
+
+## Load preprocessed data
+
+Since this document is concerned with regression models, I select only the variables of interest. Since we're not using `caret` to tune or multisample, I center and scale here, too.
+
+```{r}
+df <- load_project_data(center_and_scale = TRUE) %>%
+  select(-outcome_numeric)
+
+df %>% glimpse
+```
+
+# Models
+
+## Model 1: categorical features only (linear additive)
+
+```{r}
+lm_model1 <- lm(
+  response_log ~ region + customer,
+  data = df
+)
+```
+
+## Model 2: Continuous features only (linear additive)
+
+```{r}
+lm_model2 <- lm(
+  response_log ~ .,
+  data = df %>% select(where(is.numeric))
+)
+```
+
+## Model 3: All features (linear additive)
+
+```{r}
+lm_model3 <- lm(
+  response_log ~ .,
+  data = df
+)
+```
+
+## Model 4: Interact region with continuous inputs
+
+```{r}
+lm_model4 <- lm(
+  response_log ~ region * (.), 
+  data = df %>% select(where(is.numeric), region)
+)
+```
+
+## Model 5: Interact customer with continuous inputs
+
+```{r}
+lm_model5 <- lm(
+  response_log ~ customer * (.), 
+  data = df %>% select(where(is.numeric), customer)
+)
+```
+ 
+## Model 6: All pairwise interactions of continuous inputs
+
+```{r}
+lm_model6 <- lm(
+  response_log ~ (.)^2, 
+  data = df %>%
+    select(where(is.numeric))
+)
+```
+ 
+## Model 7: P-value all-stars (squared)
+ 
+I'm throwing wild haymakers here (my signature move in this project), but for my first solo model, I decided to take the the predictors which were significant in the model with every variable included (Model 3, above) and apply a new basis function to continuous variable. I chose the parabolic as the new basis.
+ 
+```{r}
+lm_model3_coef <- summary(lm_model3)$coefficients
+
+lm_model7_significant_predictors <- lm_model3_coef %>%
+  as_tibble %>%
+  mutate(predictor = row.names(lm_model3_coef)) %>%
+  rename(p = 4) %>%
+  filter(p < .05)
+
+lm_model7_significant_predictors
+```
+
+Okay, we've got our predictors. Let's model using the parabolic basis function.
+
+```{r}
+lm_model7 <- lm(
+  formula = response_log ~ region +
+    customer +
+    I(xa_02^2) +
+    I(xb_04^2) +
+    I(xb_07^2) +
+    I(xb_08^2) +
+    I(xn_04^2) +
+    I(xn_05^2) +
+    I(xn_08^2) +
+    I(xw_01^2),
+  data = df
+)
+```
+ 
+ 
+## Model 8:
+ 
+For this model, I chose predictors based on my EDA. I'm specifically interested in predictors which:
+
+- Are sentiment-based and continuous
+- Have an apparently Gaussian distribution
+- Have a high number of unique values
+- Are not highly correlated with other variables in the same group
+
+We need a new basis function to meet requirements. I'm going to try splines, because I thought some of the loess lines looked spliney. I chose a 20-degrees-of-freedom basis pretty much at random. Okay, let's model.
+
+```{r}
+lm_model8 <- lm(
+  formula = response_log ~ splines::ns(xa_07, df = 20) + 
+    splines::ns(xa_08, df = 20) + 
+    splines::ns(xb_08, df = 20) + 
+    splines::ns(xb_08, df = 20) + 
+    splines::ns(xn_08, df = 20) + 
+    splines::ns(xn_08, df = 20) + 
+    splines::ns(xs_01, df = 20) + 
+    splines::ns(xs_02, df = 20) + 
+    splines::ns(xs_03, df = 20) + 
+    splines::ns(xs_04, df = 20),
+  data = df
+)
+```
+
+ 
+## Model 9: `findCorrelation` based selection
+ 
+Here, I use `findCorrelation` from `caret` to choose numeric predictors which have highest pairwise correlation. Note that this approach is different from model 8 because I don't consider apparent distribution or number of unique values. I also exclude categorical variables from this model.
+
+```{r}
+lm_model9_correlated_predictors <- df %>%
+  select(-region, -customer, -response_log) %>%
+  cor %>%
+  caret::findCorrelation(cutoff = .8, names = TRUE)
+
+lm_model9_correlated_predictors
+```
+Including all non-correlated continuous predictors, I model and apply a low-degree `spline` basis function, because why not?
+
+```{r}
+lm_model9 <- lm(
+  formula = response_log ~ 
+    splines::ns(xa_02, df = 3) +
+    splines::ns(xa_04, df = 3) +
+    splines::ns(xa_05, df = 3) +
+    splines::ns(xb_01, df = 3) +
+    splines::ns(xb_03, df = 3) +
+    splines::ns(xb_04, df = 3) +
+    splines::ns(xb_05, df = 3) +
+    splines::ns(xb_06, df = 3) +
+    splines::ns(xn_04, df = 3) +
+    splines::ns(xn_05, df = 3),
+  data = df
+)
+```
+
+
+# Comparison
+
+Let's use `broom` to examine some summary statistics. I couldn't find an easy RMSE with pure `lm`, so I had to roll my own, which I hopefully did correctly.
+
+```{r}
+lm_all_models <- list(
+  lm_model1,
+  lm_model2,
+  lm_model3,
+  lm_model4,
+  lm_model5,
+  lm_model6,
+  lm_model7,
+  lm_model8,
+  lm_model9
+)
+
+get_rmse <- function(model) {
+  pred <- predict(model, newdata = df)
+  obs <- df$response_log
+  
+  sum((pred-obs)^2) %>%
+    sum %>%
+    magrittr::divide_by(length(obs)) %>%
+    sqrt()
+}
+
+df_lm_all_models <- lm_all_models %>%
+  purrr::map_df(broom::glance) %>%
+  select(
+    r.squared,
+    adj.r.squared,
+    sigma,
+    AIC,
+    BIC,
+    statistic
+  ) %>%
+  mutate(
+    model = paste(1:9, sep=""),
+    rmse = lm_all_models %>% purrr::map_dbl(get_rmse)
+  )
+
+df_lm_all_models %>%
+  pivot_longer(cols = -model) %>%
+  ggplot(mapping = aes(x = model, y = value)) +
+  geom_col() +
+  facet_wrap(~ name, scales = "free_y")
+```
+
+## R^2 and adjusted R^2
+
+Let's look at these two by themselves so we can see them on the same scale:
+
+```{r}
+df_lm_all_models %>%
+  select(model, r.squared, adj.r.squared) %>%
+  pivot_longer(cols = -model) %>%
+  ggplot(mapping = aes(x = model, y = value)) +
+  geom_col() +
+  facet_wrap(~ name)
+```
+
+My understanding is that adjusted $r^2$ corrects a potential problem that can result from having too many predictors in a model which do not contribute to prediction significantly. If we just looked at $r^2$, we might be tempted by model 6. but from the plots, we can see that it may be benefiting from its many predictors (6 is the one that examines all pairwise interactions of continuous inputs). Based on adjusted $r^2$, models 3, 4, and 5 are looking strong. I'm inclined to think that model 5 is extra good because it leads $r^2$ while having the second-best adjusted $r^2$, but I'm not sure if that's the correct interpretation.
+
+Let's supplement this analysis with examination of the information criteria.
+
+## AIC/BIC
+
+To be transparent, I checked both AIC and BIC because of [this StackExchange thread](https://stats.stackexchange.com/questions/577/is-there-any-reason-to-prefer-the-aic-or-bic-over-the-other).
+
+```{r}
+df_lm_all_models %>%
+  select(model, AIC, BIC) %>%
+  pivot_longer(cols = -model) %>%
+  ggplot(mapping = aes(x = model, y = value)) +
+  geom_col() +
+  facet_wrap(~ name)
+```
+
+Examining AIC doesn't change my mind much, since the models with strongest AIC are also the ones that have the best $r^2$ / adj $r^2$. Model 3 makes a strong showing here, but it's clearly worse than Model 5 by $r^2$.
+
+## RMSE 
+
+```{r}
+df_lm_all_models %>%
+  select(model, rmse) %>%
+  ggplot(mapping = aes(x = model, y = rmse)) +
+  geom_col()
+```
+
+Model 6 sings its siren song again, but we're not fooled. Probably. I dunno, Model 6 might be great, but I'm suspicious because of its BIC, low adjusted $r^2$, and high number of predictors. Maybe we'll call it a backup.
+
+Meanwhile, model 5 continues to look good by this metric, with 3 and 4 not far behind. 
+
+# Moving forward
+
+Based on this analysis, I retain models 5, 4, and 6 for future analysis.
+ 
+```{r}
+readr::write_rds(lm_model5, "./models/lm_rank1_model5.rds")
+readr::write_rds(lm_model4, "./models/lm_rank2_model4.rds")
+readr::write_rds(lm_model6, "./models/lm_rank3_model6.rds")
+```
+ 
+ 

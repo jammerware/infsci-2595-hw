@@ -1,6 +1,7 @@
 # load libraries
 library(tidyverse)
 library(recipes)
+library(doParallel)
 
 # enable raw/pre-processed loading of data
 load_project_data <- function(
@@ -9,7 +10,13 @@ load_project_data <- function(
     outcome_to_numeric = TRUE,
     center_and_scale = FALSE # caret can center/scale with simple arguments, but rstanarm can't
   ) {
-  df <- readr::read_csv("./final_project_train.csv", col_names = TRUE, col_types = cols())
+  
+  # load and try to suppress overeager messages
+  df <- readr::read_csv(
+    "./final_project_train.csv", 
+    col_names = TRUE, 
+    col_types = cols()
+  )
   
   # i'm going to assume that i never want the row_id until further notice
   df <- df %>%
@@ -37,7 +44,7 @@ load_project_data <- function(
   
   if (center_and_scale == TRUE) {
     df <- df %>%
-      mutate(across(is.numeric, ~ as.numeric(scale(.))))
+      mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
   }
   
   # if (preprocess_data) {

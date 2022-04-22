@@ -1,6 +1,6 @@
 ---
 title: "INFSCI 2595 Final"
-subtitle: "Part Ia: Predictors (Lexicon: Bing)"
+subtitle: "Part iA: Predictors (Lexicon: Bing)"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -71,18 +71,10 @@ df %>%
 Let's see if any of these inputs are correlated with one another or with the response variable.
 
 ```{r}
-df %>%
-  select(
-    starts_with("xb"), 
-    response_log
-  ) %>%
-  cor() %>%
-  corrplot::corrplot(type = "upper")
+visualize_correlations(df, "xb")
 ```
 
-We can see moderate correlation within the group, with the 4th input being noticeably correlated with inputs 7 and 8 and somewhat with input 5. 3 is also correlated with 5. It may be wise to exclude `xb_05` from analysis since it's correlated with multiple other inputs.
-
-Somewhat worryingly, no input is strongly correlated with the response variable. 
+Like the AFINN lexicon, there are clear correlations between some of the variables within the group (`xb_01`, for example, is correlated with most other features). 
 
 # Relationship to target variables
 

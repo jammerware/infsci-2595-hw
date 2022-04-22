@@ -1,0 +1,76 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iiD2: Comparing tuned regression models"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I compare the performance of all tuned regression models in order to identify the one that seems the best.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+library(caret)
+
+source("./tools.R")
+```
+
+
+## Load models
+
+```{r}
+all_reg_models <- list(
+  reg_model1_lm_all = load_model("adv_reg_model1_lm_all.rds"),
+  reg_model2_lm_continuous_interact = load_model("adv_reg_model2_lm_continuous_interact.rds"),
+  reg_model3_lm_customer_interact_sentiment = load_model("adv_reg_model3_lm_customer_interact_sentiment.rds"),
+  reg_model4_lm_pairwise_sentiment = load_model("adv_reg_model4_lm_pairwise_sentiment.rds"),
+  reg_model5_lm_enet = load_model("adv_reg_model5_lm_enet.rds"),
+  reg_model6_lm_enet_pairwise_sentiment = load_model("adv_reg_model6_lm_enet_pairwise_sentiment.rds"),
+  reg_model7_nnet = load_model("adv_reg_model7_nnet.rds"),
+  reg_model8_rf = load_model("adv_reg_model8_rf.rds"),
+  reg_model9_xgb = load_model("adv_reg_model9_xgb.rds"),
+  reg_model10_svm = load_model("adv_reg_model10_svm_rbf.rds"),
+  reg_model11_knn = load_model("adv_reg_model11_knn.rds")
+)
+
+all_reg_model_results <- resamples(all_reg_models)
+```
+
+# Model performance
+
+## RMSE
+
+```{r}
+dotplot(all_reg_model_results, main = "Tuned regression models: results")
+```
+
+This is tough to interpret. Models 2, 3, and 4 seem clearly worse by the error metrics and have high variance, so I guess they're pretty easy to rule out. Let's zoom in on some metrics to see if we can see better.
+
+```{r}
+dotplot(all_reg_model_results, main = "Tuned regression models: RMSE", metric = "RMSE")
+```
+
+By RMSE, the models are close (aside from 2-4, which I've already ruled out). Let's look at R^2.
+
+```{r}
+dotplot(all_reg_model_results, main = "Tuned regression models: R^2", metric = "Rsquared")
+```
+
+This helps some. There's a clear ranking, and model 10 is significantly better than the second-best model across all resamplings. 
+
+# The "best" model
+
+Based on having the best $r^2$ and competitive RMSE, I select the SVM as the best performing of the models I tuned.

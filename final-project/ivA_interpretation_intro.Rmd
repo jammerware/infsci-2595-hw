@@ -5,7 +5,7 @@ author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
 knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
   )
 ---
 

@@ -1,0 +1,109 @@
+---
+title: "INFSCI 2595 Final"
+subtitle: "Part iA: Predictors (Word count features)"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I perform exploratory data analysis on the word-count-related inputs.
+
+# Setup
+
+## Libraries and tools
+
+```{r}
+library(tidyverse)
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(response_log, outcome_numeric, starts_with("xw"))
+
+df %>% glimpse
+```
+
+# Distributions
+
+Let's look at the distributions of the variables first.
+
+```{r}
+df %>% 
+  select(-outcome_numeric, -response_log) %>%
+  summary
+```
+
+Like the sentimentR features, these have more similar scale to one another. 
+
+```{r}
+visualize_distributions(df, "xw")
+```
+
+In this group, `xw_01` is normally distributed, while the others are more odd. `xw_03` is left-tailed.
+
+## Distinct values
+
+As I worked with each group of continuous predictors, I noticed that some seem to have more unique values than others. Let's quantify that:
+
+```{r}
+df %>%
+  select(-outcome_numeric, -response_log) %>%
+  pivot_longer(cols = everything()) %>%
+  group_by(name) %>% 
+  unique %>%
+  count
+```
+
+`xw_01` has more distinct values than the other two by a noticeable amount. Combined with the fact that this variable has the most Gaussian distribution, that suggests that the true distribution may be Gaussian.
+
+# Correlation within the group
+
+Let's see if any of these inputs are correlated with one another or with the response variable.
+
+```{r}
+visualize_correlations(df, "xw")
+```
+
+`xw_01` is highly correlated with the other two inputs, suggesting we should only use one of these at a time.
+
+# Relationship to target variables
+
+## The continuous `response` variable
+
+Note that I log-transformed response since that's what I'll be predicting anyway.
+
+```{r}
+df %>%
+  pivot_longer(cols = starts_with("xw")) %>%
+  ggplot(mapping = aes(x = value, y = response_log)) +
+  geom_point() +
+  geom_smooth(formula = y ~ x, method = "loess") + 
+  facet_wrap(~ name, scales = "free")
+```
+
+These relationships look more linear than some of the other predictors, but a little curvy. A low order polynomial might be worth a try.
+
+## The `outcome` classification target
+
+```{r}
+df %>%
+  select(-response_log) %>%
+  pivot_longer(cols = starts_with("xw")) %>%
+  ggplot(mapping = aes(x = value, y = outcome_numeric)) +
+  geom_point(size = 4, alpha = .33) +
+  facet_wrap(~ name, scales = "free")
+```
+
+Like the sentimentR group, there's not a clear trend between values of these variables and the `outcome` variable.

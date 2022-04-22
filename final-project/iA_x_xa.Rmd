@@ -70,11 +70,13 @@ As we can see here, inputs 1, 4, 7, and 8 have significantly more unique values 
 
 # Correlation within the group
 
-Let's see if any of these inputs are correlated with one another or with the response variable.
+Let's see if any of these inputs are correlated with one another.
 
 ```{r}
 visualize_correlations(df, "xa")
 ```
+
+There seem to be significant correlations between some of the variables within the group. We'll keep that in mind when selecting variables for modeling.
 
 There is at least moderate correlation among several variables. 
 
