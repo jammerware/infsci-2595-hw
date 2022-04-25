@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiD: Tuning and advanced regression models"
+title: "Part iiD: Tuning and advanced regression models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -49,17 +49,10 @@ supertrain_regression_info <- list(
   ctrl = trainControl(
     method = "repeatedcv", 
     repeats = 5, 
-    number = 5
+    number = 5,
+    savePredictions = TRUE
   )
 )
-```
-
-I'm also saving every model produced here for evaluation in the next document.
-
-```{r}
-save_model <- function(filename, model) {
-  readr::write_rds(model, paste("./models/adv_reg_", filename ,".rds", sep = ""))
-}
 ```
 
 # Modeling
@@ -74,7 +67,7 @@ model1 <- my_supertrain(
   info = supertrain_regression_info
 )
 
-save_model("model1_lm_all", model1)
+save_model("model1_lm_all", model1, prefix = "adv_reg_")
 ```
 
 ## Model 2: All pairwise interactions of continuous inputs, include additive categorical features
@@ -87,7 +80,7 @@ model2 <- my_supertrain(
   info = supertrain_regression_info
 )
 
-save_model("model2_lm_continuous_interact", model2)
+save_model("model2_lm_continuous_interact", model2, prefix = "adv_reg_")
 ```
 
 ## Model 3: First model selected in iiA (model 5 in that document)
@@ -100,7 +93,7 @@ model3_formerly5 <- my_supertrain(
   info = supertrain_regression_info
 )
 
-save_model("model3_lm_customer_interact_sentiment", model3_formerly5)
+save_model("model3_lm_customer_interact_sentiment", model3_formerly5, prefix = "adv_reg_")
 ```
 
 ## Model 4: Second model selected in iiA (which was model 6 in that document)
@@ -113,7 +106,7 @@ model4 <- my_supertrain(
   info = supertrain_regression_info
 )
 
-save_model("model4_lm_pairwise_sentiment", model4)
+save_model("model4_lm_pairwise_sentiment", model4, prefix = "adv_reg_")
 ```
 
 ## Model 5: Regularized regression with Elastic net (All pairwise continuous, additive categorical features)
@@ -149,7 +142,7 @@ model5 <- my_supertrain(
   )
 )
 
-save_model("model5_lm_enet", model5)
+save_model("model5_lm_enet", model5, prefix = "adv_reg_")
 ```
 
 
@@ -185,7 +178,7 @@ model6 <- my_supertrain(
   )
 )
 
-save_model("model6_lm_enet_pairwise_sentiment", model6)
+save_model("model6_lm_enet_pairwise_sentiment", model6, prefix = "adv_reg_")
 ```
 
 
@@ -220,7 +213,7 @@ model7 <- my_supertrain(
   )
 )
 
-save_model("model7_nnet", model7)
+save_model("model7_nnet", model7, prefix = "adv_reg_")
 ```
 
 ## Model 8: Random forest
@@ -251,12 +244,14 @@ model8 <- my_supertrain(
   )
 )
 
-save_model("model8_rf", model8)
+save_model("model8_rf", model8, prefix = "adv_reg_")
 ```
 
 ## Model 9 : Gradient boosted tree (XGBoost)
 
 Same deal as before: we'll run with the default tuning grid and then tune parameters.
+
+### Default tune
 
 ```{r}
 model9_untuned <- my_supertrain(
@@ -268,6 +263,10 @@ model9_untuned <- my_supertrain(
 
 model9_untuned
 ```
+
+### Tuned
+
+Note that I wasn't able to tune all the possibilities - it took quite awhile on my hardware even with these parameters.
 
 ```{r}
 model9 <- my_supertrain(
@@ -288,10 +287,12 @@ model9 <- my_supertrain(
   )
 )
 
-save_model("model9_xgb", model9)
+save_model("model9_xgb", model9, prefix = "adv_reg_")
 ```
 
 ## Model 10: Freestyle choice 1 - Support Vector Machines (SVM) with RBF
+
+### Default tune
 
 ```{r}
 model10_untuned <- my_supertrain(
@@ -304,11 +305,11 @@ model10_untuned <- my_supertrain(
 model10_untuned
 ```
 
-And tune:
+### Tuned
 
 ```{r}
 model10 <- my_supertrain(
-  outcome ~ .,
+  response_log ~ .,
   data = df,
   method = "svmRadial",
   info = supertrain_regression_info,
@@ -318,7 +319,7 @@ model10 <- my_supertrain(
   )
 )
 
-save_model("model10_svm_rbf", model10)
+save_model("model10_svm_rbf", model10, prefix = "adv_reg_")
 ```
 
 ## Model 11: Freestyle choice 2 - KNN
@@ -349,7 +350,7 @@ model11 <- my_supertrain(
   )
 )
 
-save_model("model11_knn", model11)
+save_model("model11_knn", model11, prefix = "adv_reg_")
 ```
 
 # Conclusion

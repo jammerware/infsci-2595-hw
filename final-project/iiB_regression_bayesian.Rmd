@@ -1,11 +1,11 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiB: Bayesian Regression Models"
+title: "Part iiB: Bayesian Regression Models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
 knit: (function(inputFile, encoding) {
-  rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
   )
 ---
 
@@ -43,16 +43,41 @@ df <- load_project_data() %>%
 
 # Models
 
-## First Bayesian model (model 3 from the previous section)
+**NOTE:** When I tried to run my best-performing model from the previous section (model 5) using `rstanarm`, I got a strange error when attempting to compute `bayes_R2`. I'll demonstrate it here, but I'll do Bayesian versions of the next-two-best models for this section.
 
-Model 3 from the previous section was my best-performing model (RMSE = 0.3299896, R^2 = 0.6233415). It uses all linear predictors. Let's examine this model from a Bayesian perspective.
+```{r, error = TRUE}
+lm_model5 <- stan_lm(
+  response_log ~ customer * (.), 
+  data = df %>% select(where(is.numeric), customer),
+  prior = R2(location = .5),
+  seed = 2022
+)
+
+bayes_R2(lm_model5)
+```
+
+
+## First Bayesian model (model 6 from the previous section)
+
+Model 6 from the previous section was my second best-performing model from the previous section:
+
+```{r}
+lm_model6 <- lm(
+  response_log ~ .^2, 
+  data = df %>% select(where(is.numeric))
+)
+
+broom::glance(lm_model6)
+```
+
+Let's examine this model from a Bayesian perspective.
 
 ### Fit
 
 ```{r}
-bayesian_model3 <- stan_lm(
-  response_log ~ ., 
-  data = df,
+bayesian_model6 <- stan_lm(
+  response_log ~ .^2, 
+  data = df %>% select(where(is.numeric)),
   prior = R2(location = .5), # starting from a weak R^2
   seed = 2022
 )
@@ -61,12 +86,24 @@ bayesian_model3 <- stan_lm(
 ### Summary
 
 ```{r}
-bayesian_model3 %>% summary
+bayesian_model6 %>% summary
 ```
 
 ## Second Bayesian Model (Model 4 from the previous section)
 
-I used Model 4 as my second model here because it was the second-best performing model previously and because it interacts `region` with the continuous inputs. Examination of the previous Bayesian model shows that `region` is likely a predictive factor, so it seems like a good guess.
+I used Model 4 as my second model here because it was the third-best performing model previously and because it interacts `region` with the continuous inputs. EDA and frequentist modeling showed that `region` is likely a predictive factor, so it seems like a good guess.
+
+### Frequentist version of this model
+
+```{r}
+lm_model4 <- lm(
+  response_log ~ region * .,
+  data = df %>% select(-customer)
+)
+
+broom::glance(lm_model4)
+```
+
 
 ### Fit
 
@@ -94,31 +131,31 @@ Let's first look at the R^2 statistic for each model.
 
 ```{r}
 purrr::map2_dfr(
-    list(bayesian_model3, bayesian_model4),
-    as.character(3:4),
+    list(bayesian_model6, bayesian_model4),
+    as.character(c("6", "4")),
     function(mod, mod_name){
       tibble::tibble(rsquared = bayes_R2(mod)) %>% 
-      mutate(model_name = mod_name)
+        mutate(model_name = mod_name)
     }
   ) %>% 
   ggplot(mapping = aes(x = rsquared)) +
-    geom_freqpoly(
-      bins = 55, 
-      mapping = aes(color = model_name), 
-      size = 1.1) +
+  geom_freqpoly(
+    bins = 55,
+    mapping = aes(color = model_name),
+    size = 1.1) +
   coord_cartesian(xlim = c(0, 1)) +
   ggthemes::scale_color_colorblind("Model") +
   theme_bw()
 ```
 
-The models are very close. Under the current formulation, Model 4 seems to have the best posterior R^2.
+Under the current formulation, Model 4 seems to have the best posterior R^2.
 
 ## Posterior noise
 
 ```{r}
 purrr::map2_dfr(
-    list(bayesian_model3, bayesian_model4),
-    as.character(3:4),
+    list(bayesian_model6, bayesian_model4),
+    as.character(c("6", "4")),
     function(mod, mod_name){
       as.data.frame(mod) %>%
         tibble::as_tibble() %>%
@@ -136,20 +173,20 @@ purrr::map2_dfr(
   theme_bw()
 ```
 
-Similarly, the posterior noise on Model 4 is slightly lower.
+Similarly, the posterior noise on Model 4 is slightly lower. Of our Bayesian models, 4 is looking pretty good.
 
 ## WAIC
 
 We can examine the WAIC to get another perspective on how these models relate to each other. Let's calculate it and attach it to the model objects, then compare them:
 
 ```{r}
-bayesian_model3$waic <- waic(bayesian_model3)
+bayesian_model6$waic <- waic(bayesian_model6)
 bayesian_model4$waic <- waic(bayesian_model4)
 
 all_models <- stanreg_list(
-  bayesian_model3, bayesian_model4,
+  bayesian_model6, bayesian_model4,
   model_names = c(
-    "All features (linear additive)", 
+    "All sentiment features (pairwise interactions)", 
     "Interacting region with continuous inputs"
   )
 )
@@ -157,9 +194,19 @@ all_models <- stanreg_list(
 loo_compare(all_models, criterion = "waic")
 ```
 
-This is inconclusive since the actual difference between the models is less than the standard error.
+Okay, I'll try to follow the warning messages.
 
-I start by looking at the posterior intervals on the variables to see which ones seem significant.
+## LOOIC
+
+I did a little bit of looking at LOOIC, and it sounds like a Bayesian equivalent of other IC-style metrics. Which means that I don't exactly know how it works, but let's look at it.
+
+```{r}
+loo_6 <- loo(bayesian_model6)
+loo_4 <- loo(bayesian_model4)
+loo_compare(loo_6, loo_4)
+```
+
+My understanding is that the significant difference here tells us that model 6 is "better" than 4 based on LOOIC, but the warning messages make me nervous, so I bailed here.
 
 ## Conclusion
 
@@ -180,10 +227,12 @@ We can also look at the actual posterior intervals for each feature, especially 
 get_significant_bayesian_coefficients(bayesian_model4)
 ```
 
+An interesting thing to note here is that `xb_07` is one of the predictors we saw doing big work in the previous section, so it's nice that it shows up here. It seems like a good predictor. `region` also shows up in both places, suggesting that it's a good predictor.
+
 ## Quantiles for R^2 and noise
 
 ```{r}
-rstanarm::bayes_R2(bayesian_model3) %>% quantile(c(.05, .5, .95))
+rstanarm::bayes_R2(bayesian_model4) %>% quantile(c(.05, .5, .95))
 ```
 ```{r}
 bayesian_model4 %>%
@@ -202,11 +251,11 @@ bayesian_model4 %>%
   as_tibble %>%
   ggplot(mapping = aes(x = sigma)) + 
   geom_histogram(bins = 60) + 
-  geom_vline(xintercept = sigma(frequentist_model4$finalModel), color = "lightblue", linetype = "dashed", size = 2) +
+  geom_vline(xintercept = sigma(lm_model4$finalModel), color = "lightblue", linetype = "dashed", size = 2) +
   geom_vline(mapping = aes(xintercept = median(sigma)), color = "gold", linetype="dashed", size = 2)
 ```
 
-As the figure shows, MLE on the noise from the standard `lm` model is within the margin of error for the posterior distribution of sigma in the Bayesian model.
+As the figure shows, MLE on the noise from the standard `lm` model is within the margin of error for the posterior distribution of sigma in the Bayesian model. The range of the noise is also not huge (based on the scale of the x-axis), so we can be reasonably confident that the noise is around the MLE provided by the frequentist model.
 
 ## Precision on the posterior $\sigma$: How certain are we?
 

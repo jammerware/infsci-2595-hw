@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiiC: Classification model predictions"
+title: "Part iiiC: Classification model predictions"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -29,43 +29,165 @@ source("./tools.R")
 ## Data
 
 ```{r}
-df <- load_project_data(outcome_to_numeric = FALSE) %>%
+df <- load_project_data(center_and_scale = TRUE, outcome_to_numeric = FALSE) %>%
   select(-response_log)
 
 df %>% glimpse()
 ```
 
-# Model analysis
+## Models to evaluate
 
-A quick utility function to create data about the predictions from each model:
+I chose two of the top-performing models from [iiiA](./iiiA_classification_glm.html) to look at here. Models 2, 3, and 9 all performed well, so I chose 3 and 9. 3 has all predictors, so we can look at a couple of different combinations of important variables, and 9 focuses specifically on the sentiment predictors.
 
 ```{r}
-get_pred_df <- function(model) {
-  preds <- predict(model, newdata = df)
+glm_model3 <- load_model("glm_model3.rds")
+glm_model9 <- load_model("glm_model9.rds")
+```
+
+## Variables of interest
+
+Based on analysis from [iiiA2](./iiiA_classification_discussion.html), strong features were the categoricals, some of the NRC lexicon predictors, and `xb_07`, which was also a good predictor in regression models. I'll examine combinations of these for these models as appropriate.
+
+## Visualization code
+
+The task we're doing here is similar to Homework 11, so we can mostly reuse the function that creates the visualization grid:
+
+```{r}
+make_test_input_grid <- function(all_input_names, top_4_inputs, all_data)
+{
+  test_list <- purrr::map(
+    all_input_names, 
+    make_test_input_list,
+    top_4_inputs = top_4_inputs,
+    all_data = all_data)
+  
+  expand.grid(
+    test_list, 
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE) %>% 
+    purrr::set_names(all_input_names)
+}
+```
+
+However, we have to adapt `make_test_input_list` to accommodate the case where faceting variables are categorical. I made a section version of it that allows you to pass faceting variables separately:
+
+```{r}
+make_test_input_list <- function(var_name, top_4_inputs, all_data)
+{
+  xvar <- all_data %>% select(var_name) %>% pull()
+  
+  if (var_name %in% top_4_inputs[1:2]){
+    # use 25 unique values between the min/max values
+    xgrid <- seq(min(xvar), max(xvar), length.out = 25)
+  } else if (var_name %in% top_4_inputs[3:4]){
+    if (is.factor(xvar)) {
+      xgrid <- levels(xvar)
+    } else {
+      # specify quantiles to use
+      xgrid <- quantile(xvar, probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+      xgrid <- as.vector(xgrid)
+    }
+  } else if (is.numeric(xvar)) {
+    # set to their median values
+    xgrid <- median(xvar, na.rm = TRUE)
+  }
+  else if (is.factor(xvar)) {
+    # for categoricals, use the mode
+    xgrid <- names(which.max(table(xvar)))
+  }
+  
+  return(xgrid)
 }
 ```
 
 
-## Model 9
+# Examining model prediction trends
 
-I chose model 9 from the GLM section (iiA), because it has the most personality and serviceable stats. Let's load it and predict probabilities.
+## Model 3
+
+Model 3 includes all predictors, so I want to look at how the very important region and customer predictors interact with top sentiment predictors. 
 
 ```{r}
-glm_model9 <- load_model("simple_cls_model9.rds")
-
-glm_model9_pred_outcome <- predict(glm_model9, newdata = df)
-df_glm_model9_pred <- tibble::tibble(
-  probability = predict(glm_model9, newdata = df, type = "prob")[,1],
-  pred = predict(glm_model9, newdata = df),
-  observed = df$outcome
+glm_model3_viz_grid <- make_test_input_grid(
+  all_input_names = df %>% select(-outcome) %>% names,
+  top_4_inputs = c(
+    "xb_07",
+    "xn_08",
+    "customer",
+    "region"
+    
+  ),
+  all_data = df
 )
 
-df_glm_model9_pred
+glm_model3_preds <- predict(glm_model3, glm_model3_viz_grid)
 ```
-
-### Calibration curve
 
 ```{r}
-calibration_plot(data = df_glm_model9_pred, obs = observed, pred = pred)
+glm_model3_viz_grid %>%
+  mutate(pred_class = glm_model3_preds) %>%
+  ggplot(mapping = aes(x = xb_07, y = xn_08)) + 
+  geom_raster(mapping = aes(fill = pred_class)) + 
+  facet_grid(customer ~ region) + 
+  scale_fill_brewer(palette = "Set1")
 ```
 
+Some of the grid properties of this visualization are less useful because the regions and customers are not ordinal. However, they show the degree and direction of how these important predictors affect customers in various regions. As we see in the figure, incidence of the event are higher with customers A, G, and M, and it also occurs more often in region `XX`. We can also observe that holding non-visualized variables constant, the event is associated with low values of `xb_07` and `xn_08`, suggesting the value of (some) sentiment variables as predictors.
+
+## Model 9
+
+Model 9 contains only sentiment-related variables. Thus, all the variables I'm faceting by are continuous. Let's examine top sentiment variables from this model.
+
+```{r}
+glm_model9_viz_grid <- make_test_input_grid(
+  all_input_names = df %>% select(-outcome, -region, -customer) %>% names,
+  top_4_inputs = c(
+    "xw_03",
+    "xa_01",
+    "xn_04",
+    "xa_04"
+    
+  ),
+  all_data = df
+)
+
+glm_model9_preds <- predict(glm_model9, glm_model9_viz_grid)
+```
+
+```{r}
+glm_model9_viz_grid %>%
+  mutate(pred_class = glm_model9_preds) %>%
+  ggplot(mapping = aes(x = xw_03, y = xa_01)) + 
+  geom_raster(mapping = aes(fill = pred_class)) + 
+  facet_grid(rows = vars(xn_04), cols = vars(xa_04), labeller = label_both) + 
+  scale_fill_brewer(palette = "Set1")
+```
+
+This seems like a very interesting finding. If my interpretation is correct, this means that `xn_04` _strongly_ predicts when the other three top variables are controlled. If `xn_04` is high, the event occurs. If it is medium or low, the event does not occur. We could permute the way we visualized the relationship to see if other factors behave similarly:
+
+```{r}
+glm_model9_viz_grid_b <- make_test_input_grid(
+  all_input_names = df %>% select(-outcome, -region, -customer) %>% names,
+  top_4_inputs = c(
+    "xn_04",
+    "xa_04",
+    "xw_03",
+    "xa_01"
+    
+  ),
+  all_data = df
+)
+
+glm_model9_preds_b <- predict(glm_model9, glm_model9_viz_grid_b)
+
+glm_model9_viz_grid_b %>%
+  mutate(pred_class = glm_model9_preds_b) %>%
+  ggplot(mapping = aes(x = xn_04, y = xa_04)) +
+  geom_raster(mapping = aes(fill = pred_class)) +
+  facet_grid(rows = vars(xa_01), cols = vars(xw_03), labeller = label_both) +
+  scale_fill_brewer(palette = "Set1")
+```
+
+This looks a little more like what I expected before. We get a pretty neat dividing boundary around 0 for values of `xn_04`, but at at extreme values of `xa_01`, the boundary looks a little less certain.
+
+I know my interpretation of these figures is pretty weak - I have a hard time understanding how the four variables interact when varied all at once. 

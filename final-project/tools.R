@@ -13,7 +13,7 @@ load_project_data <- function(
   
   # load and try to suppress overeager messages
   df <- readr::read_csv(
-    "./final_project_train.csv", 
+    "./data/final_project_train.csv", 
     col_names = TRUE, 
     col_types = cols()
   )

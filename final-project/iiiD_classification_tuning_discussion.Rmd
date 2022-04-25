@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiiD2: Comparing tuned classification models"
+title: "Part iiiD2: Comparing tuned classification models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -41,8 +41,8 @@ all_cls_models <- list(
   cls_model6_cubic_sentiment_enet = load_model("adv_class_model6_cubic_sentiment_enet.rds"),
   cls_model7_nnet = load_model("adv_class_model7_nnet.rds"),
   cls_model8_rf = load_model("adv_class_model8_rf.rds"),
-  cls_model9_xgb = load_model("adv_class_model9_xgb.rds"),
-  cls_model10_svm = load_model("adv_class_model10_svm.rds"),
+  # cls_model9_xgb = load_model("adv_class_model9_xgb.rds"),
+  cls_model10_svm = load_model("adv_class_model10_svm_rbf.rds"),
   cls_model11_knn = load_model("adv_class_model11_knn.rds")
 )
 

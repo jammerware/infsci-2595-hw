@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part IIc: Regression model predictions"
+title: "Part iiC: Regression model predictions"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # About this document
 
-In this document, I make predictions with two of my top-performing regression models in order to understand trends between the predicted log-response and the observed log-response.
+In this document, I make predictions with two of my top-performing regression models in order to understand trends between the predicted log-response and the observed log-response across variables of interest.
 
 # Setup
 
@@ -29,7 +29,7 @@ source("./tools.R")
 ## Data
 
 ```{r}
-df <- load_project_data() %>%
+df <- load_project_data(center_and_scale = TRUE) %>%
   select(-outcome_numeric)
 
 df %>% glimpse()
@@ -44,154 +44,144 @@ lm_model5 <- readr::read_rds("./models/lm_rank1_model5.rds")
 lm_model6 <- readr::read_rds("./models/lm_rank3_model6.rds")
 ```
 
+## Variables of interest
+
+Based on performance in iiA, variables of interest are `region`, `customer`, and two top-performing sentiment variables (`xb_07` and `xn_08`).
+
 # Analysis
 
-A quick utility function to visualize the intervals/trends:
+Let's apply what we know about important variables to these models. Spoiler alert: we need a function that generates confidence and prediction intervals for a given model and visualization grid.
 
 ```{r}
-get_pred_trends_df <- function(model, data) {
-  # get the prediction/confidence intervals
-  pred_data <- cbind(
-    predict(model, newdata = data, interval = "confidence"),
-    predict(model, newdata = data, interval = "prediction")
-  ) %>%
-    magrittr::set_colnames(c(
-      "ci_fit",
-      "ci_lwr",
-      "ci_upr",
-      "pred_fit",
-      "pred_lwr",
-      "pred_upr"
-    )) %>%
-    as_tibble 
+generate_preds <- function(model, viz_grid) {
+  preds <- predict(model, viz_grid, interval = "confidence") %>%
+    as.data.frame %>%
+    as_tibble %>%
+    rename(
+      pred = fit,
+      ci_lwr = lwr,
+      ci_upr = upr
+    ) %>%
+    bind_cols(
+      predict(
+        model,
+        viz_grid,
+        interval = "prediction"
+      ) %>%
+        as.data.frame %>%
+        as_tibble %>%
+        select(
+          pred_lwr = lwr,
+          pred_upr = upr
+        )
+    )
   
-  # combine with model dataset
-  cbind(
-    data,
-    pred_data
-  )
+  viz_grid %>% bind_cols(preds)
 }
 ```
 
-## Looking at `xb_07`
 
-I decided to look at this sentiment predictor because it appeared as a solo predictor (or as an interaction) in all three of the top-performing linear models. 
+## Model 5
 
-**NOTE:** I suspect this is overspecific, because I didn't see any other common terms other than the categorical ones, and that seems wrong. So I'll look at this specific predictor, and then the groups of sentiment variables below, because, you know. Gotta do something.
+Model 5 includes `customer` and both of the sentiment predictors. Let's explore combinations of these three.
 
-### Model 5: Customer + `xb_07`
+### `customer` and `xb_07`
 
-Model 5 has the `customer` categorical, so let's look at `xb_07` faceted by that.
-
-```{r}
-get_pred_trends_df(lm_model5, df_lm_model5) %>%
-  ggplot(mapping = aes(x = xb_07)) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = pred_lwr,
-      ymax = pred_upr
-    ),
-    fill = "orange"
-  ) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = ci_lwr,
-      ymax = ci_upr
-    ),
-    fill = "gray"
-  ) +
-  geom_line(mapping = aes(y = ci_fit)) + 
-  facet_wrap(~ customer)
-```
-
-It seems notable that some `customer` groups have such large confidence intervals compared to others. At first I thought this might be due to imbalance in the customer factor's levels, but the relationship between numbers of observations and CI width is unreliable:
+We need a tibble that varies the two variables we want to examine and holds the other variables constant. Let's make it.
 
 ```{r}
-df_lm_model5 %>%
-  group_by(customer) %>%
-  count %>%
-  arrange(desc(n))
+lm_model5_xb_07_vizgrid <- append(
+  expand.grid(
+    customer = df$customer %>% unique(),
+    xb_07 = seq(
+      min(df$xb_07),
+      max(df$xb_07),
+      length.out = 101
+    )
+  ),
+  df %>%
+    select(
+      -customer,
+      -region,
+      -response_log,
+      -xb_07
+    ) %>%
+    colMeans
+) %>% as_tibble
+
+lm_model5_xb_07_vizgrid
 ```
 
-Notably, group A has the same number of observations as group B, but A's CI width is massive overall, and B's is much smaller. So I guess my argument here is that customers in some groups are much easier to predict than others, but I don't know why.
-
-Also, I'm wondering if it's a problem that the bounds of the CI and the prediction interval are so close that I can't see them in the figures.
-
-### Model 5: `region` + `xb_07`
+We also need predictions for our visualization grid:
 
 ```{r}
-get_pred_trends_df(lm_model5, df_lm_model5) %>%
-  ggplot(mapping = aes(x = xb_07)) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = pred_lwr,
-      ymax = pred_upr
-    ),
-    fill = "orange"
-  ) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = ci_lwr,
-      ymax = ci_upr
-    ),
-    fill = "gray"
-  ) +
-  geom_line(mapping = aes(y = ci_fit)) + 
-  facet_wrap(~ region)
+df_lm_model5_xb_07 <- generate_preds(lm_model5, lm_model5_xb_07_vizgrid)
 ```
 
-At extreme values of `xb_07`, the intervals get noticeably wider. The exception is high values of in region `XX`. Region `ZZ` seems to have extra uncertainty.
-
-### Model 6: `customer` + `xb_07`
+We can finally visualize trends!
 
 ```{r}
-get_pred_trends_df(lm_model6, df_lm_model6) %>%
-  ggplot(mapping = aes(x = xb_07)) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = pred_lwr,
-      ymax = pred_upr
-    ),
-    fill = "orange"
-  ) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = ci_lwr,
-      ymax = ci_upr
-    ),
-    fill = "gray"
-  ) +
-  geom_line(mapping = aes(y = ci_fit)) + 
-  facet_wrap(~ customer)
+df_lm_model5_xb_07 %>%
+    ggplot(mapping = aes(x = xb_07)) + 
+    ggtitle("xb_07 with respect to customer") +
+    geom_ribbon(mapping = aes(ymin = pred_lwr, ymax = pred_upr), fill = "orange") +
+    geom_ribbon(mapping = aes(ymin = ci_lwr, ymax = ci_upr), fill = "gray") +
+    geom_line(mapping = aes(y = pred)) +
+    facet_wrap(~ customer)
 ```
 
-Unlike model 5, model 6 seems to have roughly equal uncertainty across values of `xb_07` and of `customer`. This may suggest it's a better model across the surface of predictors (?)
+This, I suspect, is super important. For some customers (B, G, Other, K, and A), values of `xb_07` don't really affect predictive accuracy - the interval size is pretty flat. Note that this is not the same as saying that the predictive accuracy is equal for all these customers. Uncertainty is high for customer A and smaller for, say G or Other. But for some customers (say, D), extreme values of `xb_07` greatly influences predictive accuracy. It may make sense to conceptualize some customers as super-loyal. For these customers, sentiment in the report doesn't really matter, while for less-than-totally-loyal customers, extreme sentiment can cause problems. 
 
-### Model 6: `region` + `xb_07`
+## Model 6
+
+This model doesn't have an important categorical to examine, so let's look at just the sentiment predictors. We already took a close look at `xb_07`, so let's facet `xn_08` by `xb_07`.
+
+### `xn_08` faceted by `xb_07`
 
 ```{r}
-get_pred_trends_df(lm_model6, df_lm_model6) %>%
-  ggplot(mapping = aes(x = xb_07)) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = pred_lwr,
-      ymax = pred_upr
+lm_model6_xb_07_xn_08_vizgrid <- append(
+  expand.grid(
+    xn_08 = seq(
+      min(df$xn_08),
+      max(df$xn_08),
+      length.out = 101
     ),
-    fill = "orange"
-  ) +
-  geom_ribbon(
-    mapping = aes(
-      ymin = ci_lwr,
-      ymax = ci_upr
+    xb_07 = seq(
+      min(df$xb_07),
+      max(df$xb_07),
+      length.out = 9
     ),
-    fill = "gray"
-  ) +
-  geom_line(mapping = aes(y = ci_fit)) + 
-  facet_wrap(~ region)
+    # the most common level of these factors
+    # borrowed from https://stackoverflow.com/questions/18433647/how-to-get-the-most-frequent-level-of-a-categorical-variable-in-r
+    customer = which.max(table(df$customer)),
+    region = which.max(table(df$region))
+  ),
+  df %>%
+    select(
+      -customer,
+      -region,
+      -response_log,
+      -xb_07,
+      -xn_08
+    ) %>%
+    colMeans
+) %>% as_tibble
+
+lm_model6_xb_07_xn_08_vizgrid
 ```
 
-Like model 5, there is more uncertainty at the outer values of `xb_07`. This seems especially true of high values in regions `XX` and `YY`.
+Make predictions and visualize trends:
 
-### Summary of evaluating both models with respect to `xb_07`, customer, and region
+```{r}
+generate_preds(lm_model6, lm_model6_xb_07_xn_08_vizgrid) %>%
+    ggplot(mapping = aes(x = xn_08)) + 
+    ggtitle("xn_08 with respect to xb_07") +
+    geom_ribbon(mapping = aes(ymin = pred_lwr, ymax = pred_upr), fill = "orange") +
+    geom_ribbon(mapping = aes(ymin = ci_lwr, ymax = ci_upr), fill = "gray") +
+    geom_line(mapping = aes(y = pred)) +
+    facet_wrap(~ xb_07)
+```
 
-In general, extreme values of the predictor increase uncertainty, particularly _high_ values as opposed to low ones. However, model 6 seems to have less variability in confidence/prediction interval than model 5 does.
+This is harder to interpret, but my read here is that at very high levels of `xb_07`, `xn_08` predicts with greater uncertainty. The bow-tie shape of all facets seems to suggest that extreme values of sentiment result in greater uncertainty. We can also see that uncertainty increases at the lower and higher cut points of `xb_07` (i.e. facets in the top and bottom rows have more uncertainty). So the moral of the story is... keep your customer relationships on a relatively even keel? 
+
+FYI: this is my favorite skill I've learned in this class. Holding other variables constant in order to determine how one variable influences uncertainty is super cool. I'm confident that my interpretation is various shades of rudimentary and incorrect, but I still think this is a really interesting technique.

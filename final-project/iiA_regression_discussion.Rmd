@@ -1,8 +1,8 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiA: Regression models (Discussion)"
+title: "Part iiA: Regression models (Discussion)"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
-date: "4/13/2022"
+date: "4/27/2022"
 output: html_document
 knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
@@ -23,6 +23,7 @@ In this document, I review the coefficient summaries from the top 3 regression m
 
 ```{r}
 library(tidyverse)
+library(caret)
 
 source("./tools.R")
 ```
@@ -38,7 +39,7 @@ lm_model6 <- readr::read_rds("./models/lm_rank3_model6.rds")
 # Coefficient summaries
 
 ```{r}
-plot_lm_varimp <- function(model) {
+get_varimp <- function(model) {
   model %>%
     varImp %>%
     arrange(desc(Overall)) %>%
@@ -47,8 +48,12 @@ plot_lm_varimp <- function(model) {
     rename(
       predictor = rowname,
       importance = Overall
-    ) %>%
-    ggplot(mapping = aes(x = importance, y = predictor)) +
+    )
+}
+
+plot_lm_varimp <- function(model) {
+  get_varimp(model) %>%
+    ggplot(mapping = aes(x = importance, y = factor(predictor, level = predictor))) +
     geom_col()
 }
 ```
@@ -60,17 +65,59 @@ plot_lm_varimp <- function(model) {
 plot_lm_varimp(lm_model5)
 ```
 
+A feature from the `xb_07` lexicon shows up multiple times in the top performers from this model, suggesting that it's important. `customer` is also a variable of interest based on this figure.
+
+Predictors which show up more than once in the top 15:
+
+- customer (14)
+- xa_08 (3)
+- xb_07 (3, once by itself)
+- xn_08 (2)
+- xs_04 (2)
+- xs_05 (2)
+
 ## Second-best ranked model (model 4)
 
 ```{r}
 plot_lm_varimp(lm_model4)
 ```
 
+Predictors which show up more than once in the top 15:
+
+- region (8, once by itself)
+- xb_02 (2, once by itself)
+- xb_04 (2, once by itself)
+- xb_07 (2, once by itself)
+- xn_04 (2, once by itself)
+- xn_08 (2, once by itself)
+- xs_03 (2, once by itself)
+
+Predictors which show up multiple times in both this and the previous model:
+- xb_07
+- xn_08
+
 ## Third-best model ranked model (model 6)
 
 ```{r}
 plot_lm_varimp(lm_model6)
 ```
+
+Predictors which show up more than once in the top 15:
+
+- xb_01 (4)
+- xb_04 (2)
+- xb_05 (3)
+- xb_06 (3)
+- xb_07 (2)
+- xn_07 (2)
+- xn_08 (2)
+- xs_06 (2)
+
+Predictors which show up multiple times in both this and _both_ the previous models:
+- xb_07
+- xn_08
+
+Additionally, in this model (but less so the others), features from the Bing lexicon seem dominant.
 
 # Discussion
 
@@ -91,9 +138,15 @@ The fact that the median importance is much lower than the variables in the top 
 
 ## Sentiment predictors
 
-Meanwhile, without knowing what the sentiment predictors really correspond to, it's hard to be sure how they matter. However, `xb_07` shows up in important variables in all three models (albeit as two interaction terms in model 6), so that seems significant.
+### The dominance of the Bing lexicon
 
-# Visualizing common coefficients
+variables derived from the Bing lexicon seem to show up more than other sentiment groups, suggesting that, for whatever reason, that lexicon is most suitable for our current application.
+
+### Recurring top performers
+
+`xb_07` and `xn_08` showed up in the top 3 models, so I'll take a closer look at them in section `iiC` which conducts predictions to examine the effects of these variables on the mean trend.
+
+# Bonus (fail): Visualizing common coefficients
 
 I had a try at visualizing the common coefficients across models. However, this isn't totally accurate, because it considers interactions of, for example `xn_03` as distinct from `xn_03` as a solo predictor. I left it in because it was a lot of work.
 

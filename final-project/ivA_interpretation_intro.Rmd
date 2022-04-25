@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part ivA: Interpretation (Intro)"
+title: "Part ivA: Interpretation (Intro)"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -28,3 +28,5 @@ My best performing regression model
 # Variable comparison
 
 # Are the sentiment variables useful?
+
+Based on findings from iiC and iiiC it seems as though sentiment variables have some utility. Some sentiment variables (e.g. `xb_07`, `xn_08`) seem to be powerful predictors in both regression and classification. In general, based on variable importance, the Bing lexicon seems to be most useful in regression. Additionally, among the sentiment variables examined closely, it seems that extreme sentiment values do not predict outcomes well (i.e. high and low values of the sentiment variables result in greater amounts of uncertainty).

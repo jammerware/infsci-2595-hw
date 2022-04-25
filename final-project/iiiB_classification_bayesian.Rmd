@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiiC: Bayesian Classification Models"
+title: "Part iiiC: Bayesian Classification Models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # About this document
 
-In this document, I evaluate two Bayesian regression models based on findings from the simple frequentist modeling done in the previous section.
+In this document, I evaluate two Bayesian regression models based on findings from the simple frequentist modeling done in the previous section. Unlike the Bayesian models I created for regression, I experimented here with priors of two strengths.
 
 **NOTE**: This document makes extensive use of code published on the course Canvas for using `rstanarm` and comparing Bayesian models.
 
@@ -79,6 +79,8 @@ visualize_bayesian_coefficients(bayesian_glm_model3_weak)
 get_significant_bayesian_coefficients(bayesian_glm_model3_weak)
 ```
 
+Like the frequentist models, customer and region show up as high importance features here. Our high-value sentiment features (`xb_07` and `xn_08`) also show up at comparatively low importance, but still significant.
+
 ### 3b: strong prior
 
 ```{r}
@@ -104,6 +106,8 @@ visualize_bayesian_coefficients(bayesian_glm_model3_strong)
 ```{r}
 get_significant_bayesian_coefficients(bayesian_glm_model3_strong)
 ```
+
+Notable here is that a word count feature shows up as significant, which has not been the case for most models evaluated so far.
 
 ## Model 9: Cubic sentiment features
 
@@ -304,5 +308,3 @@ bayesian_glm_model3_strong %>%
 ```
 
 This is a lot of predictors, but they mostly all seem to be contributing. There is high correlation with the intercept in some cases.
-
-

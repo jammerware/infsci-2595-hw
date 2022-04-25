@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiD2: Comparing tuned regression models"
+title: "Part iiD2: Comparing tuned regression models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -60,17 +60,20 @@ dotplot(all_reg_model_results, main = "Tuned regression models: results")
 This is tough to interpret. Models 2, 3, and 4 seem clearly worse by the error metrics and have high variance, so I guess they're pretty easy to rule out. Let's zoom in on some metrics to see if we can see better.
 
 ```{r}
-dotplot(all_reg_model_results, main = "Tuned regression models: RMSE", metric = "RMSE")
+dotplot(
+  resamples(all_reg_models[-c(2, 3, 4)]),
+  main = "Tuned regression models: RMSE", metric = "RMSE"
+)
 ```
 
-By RMSE, the models are close (aside from 2-4, which I've already ruled out). Let's look at R^2.
+By RMSE, the remaining models are close (note the scale of the x-axis). Let's look at R^2.
 
 ```{r}
 dotplot(all_reg_model_results, main = "Tuned regression models: R^2", metric = "Rsquared")
 ```
 
-This helps some. There's a clear ranking, and model 10 is significantly better than the second-best model across all resamplings. 
+There's a clear ranking, and model 10 is significantly better than the second-best model across all resamplings for r^2.
 
 # The "best" model
 
-Based on having the best $r^2$ and competitive RMSE, I select the SVM as the best performing of the models I tuned.
+Based on having the best $r^2$ and strong RMSE, I select the SVM as the best performing of the models I tuned.

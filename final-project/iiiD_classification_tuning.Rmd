@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiiD: Tuning and advanced classification models"
+title: "Part iiiD: Tuning and advanced classification models"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -160,7 +160,7 @@ class_model5 <- my_supertrain(
   )
 )
 
-save_model("model5_pairwise_continues_linear_enet", class_model5, prefix = "adv_class_")
+save_model("model5_pairwise_continuous_linear_enet", class_model5, prefix = "adv_class_")
 ```
 
 
@@ -341,7 +341,7 @@ class_model10 <- my_supertrain(
   )
 )
 
-save_model("model10_svm", class_model10, prefix = "adv_class_")
+save_model("model10_svm_rbf", class_model10, prefix = "adv_class_")
 ```
 
 ## Model 11: K-nearest neighbors

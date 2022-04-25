@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part iiiA: Simple classification models (GLM)"
+title: "Part iiiA: Simple classification models (GLM)"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "04/27/2022"
 output: html_document
@@ -41,10 +41,12 @@ df %>% glimpse
 
 A quick utility function so I don't have to write `family = "binomial"` 9 times.
 
+**NOTE:** I train each model with "ROC" as the objective first, then again with "accuracy" as the objective. I'll select top models based on both metrics.
+
 **NOTE:** This part of the assignment asks us to use `glm` rather than tuning the model with `caret`. I couldn't figure out how to compute ROC, sensitivity, and specificity over multiple thresholds easily without caret, so I just used it and only did 5-fold cv to minimize resampling.
 
 ```{r}
-train_glm <- function(formula = outcome ~ ., data) {
+train_glm <- function(formula = outcome ~ ., data, objective = "accuracy") {
   set.seed(2022)
   
   train(
@@ -52,14 +54,14 @@ train_glm <- function(formula = outcome ~ ., data) {
     data = data,
     method = "glm",
     family = "binomial",
-    metric = "ROC",
+    metric = ifelse(objective == "accuracy", "Accuracy", "ROC"),
     preProcess = c("center", "scale"),
     trControl = trainControl(
       method = "cv", 
       number = 5,
       classProbs = TRUE,
       savePredictions = TRUE,
-      summaryFunction = twoClassSummary
+      summaryFunction = ifelse(objective == "accuracy", caret::defaultSummary, caret::twoClassSummary)
     )
   )
 }
@@ -67,31 +69,66 @@ train_glm <- function(formula = outcome ~ ., data) {
 
 ## Model 1: Categorical variables (linear additive)
 
+### Accuracy
+
 ```{r}
-glm_model1 <- train_glm(
+glm_model1_acc <- train_glm(
   formula = outcome ~ .,
   data = df %>% select(where(is.factor))
 )
 ```
 
-## Model 2: Continuous variables (linear additive)
+### ROC
 
 ```{r}
-glm_model2 <- train_glm(
+glm_model1_roc <- train_glm(
+  formula = outcome ~ .,
+  data = df %>% select(where(is.factor)),
+  objective = "roc"
+)
+```
+
+## Model 2: Continuous variables (linear additive)
+
+### Accuracy
+
+```{r}
+glm_model2_acc <- train_glm(
   data = df %>% select(where(is.numeric), outcome)
 )
 ```
 
-## Model 3: All variables (linear additive)
+### ROC
 
 ```{r}
-glm_model3 <- train_glm(data = df)
+glm_model2_roc <- train_glm(
+  data = df %>% select(where(is.numeric), outcome),
+  objective = "roc"
+)
 ```
+
+
+## Model 3: All variables (linear additive)
+
+### Accuracy
+
+```{r}
+glm_model3_acc <- train_glm(data = df)
+```
+
+### ROC
+
+```{r}
+glm_model3_roc <- train_glm(data = df, objective = "roc")
+```
+
 
 ## Model 4: Interact region with continuous inputs
 
+### Accuracy
+
 ```{r}
-glm_model4 <- train_glm(
+glm_model4_acc <- train_glm(
   formula = outcome ~ region * .,
   data = df %>% select(
     where(is.numeric),
@@ -101,10 +138,26 @@ glm_model4 <- train_glm(
 )
 ```
 
-## Model 5: Interact customer with continuous inputs
+### ROC
 
 ```{r}
-glm_model5 <- train_glm(
+glm_model4_roc <- train_glm(
+  formula = outcome ~ region * .,
+  data = df %>% select(
+    where(is.numeric),
+    region,
+    outcome
+  ),
+  objective = "roc"
+)
+```
+
+## Model 5: Interact customer with continuous inputs
+
+### Accuracy
+
+```{r}
+glm_model5_acc <- train_glm(
   formula = outcome ~ customer * .,
   data = df %>% 
     select(
@@ -115,12 +168,39 @@ glm_model5 <- train_glm(
 )
 ```
 
-## Model 6: All pairwise interactions of continuous inputs
+### ROC
 
 ```{r}
-glm_model6 <- train_glm(
+glm_model5_roc <- train_glm(
+  formula = outcome ~ customer * .,
+  data = df %>% 
+    select(
+      where(is.numeric),
+      customer,
+      outcome
+    ),
+  objective = "roc"
+)
+```
+
+## Model 6: All pairwise interactions of continuous inputs
+
+### Accuracy
+
+```{r}
+glm_model6_acc <- train_glm(
   formula = outcome ~ .^2,
   data = df %>% select(where(is.numeric), outcome)
+)
+```
+
+### ROC
+
+```{r}
+glm_model6_roc <- train_glm(
+  formula = outcome ~ .^2,
+  data = df %>% select(where(is.numeric), outcome),
+  objective = "roc"
 )
 ```
 
@@ -129,7 +209,7 @@ glm_model6 <- train_glm(
 Similar to my first solo model from the regression section, I select the coefficients which were significant in model 3.
 
 ```{r}
-glm_model3_coef <- summary(glm_model3)$coefficients
+glm_model3_coef <- summary(glm_model3_roc)$coefficients
 
 glm_model7_significant_predictors <- glm_model3_coef %>%
   as_tibble %>%
@@ -142,8 +222,10 @@ glm_model7_significant_predictors$predictor
 
 I'll use these predictors with a parabolic basis function:
 
+### Accuracy
+
 ```{r}
-glm_model7 <- train_glm(
+glm_model7_acc <- train_glm(
   formula = outcome ~
     customer +
     region +
@@ -156,18 +238,51 @@ glm_model7 <- train_glm(
 )
 ```
 
+### ROC
+
+```{r}
+glm_model7_roc <- train_glm(
+  formula = outcome ~
+    customer +
+    region +
+    I(xn_03^2) +
+    I(xn_07^2) +
+    I(xn_08^2) +
+    I(xa_05^2) +
+    I(xw_03^2),
+  data = df,
+  objective = "roc"
+)
+```
+
 ## Model 8: basically random basis functions
 
 In an effort to do something different from my regression models, I apply different basis functions to each group of sentiment predictors. My idea is to see if the use of various basis functions leads to better performance from one group of predictors.
 
+### Accuracy
+
 ```{r}
-glm_model8 <- train_glm(
+glm_model8_acc <- train_glm(
   formula = outcome ~ cos(xa_01) + cos(xa_02) + cos(xa_03) + cos(xa_04) + cos(xa_05) + cos(xa_06) + cos(xa_07) + cos(xa_08) +
     sin(xb_01) + sin(xb_02) + sin(xb_03) + sin(xb_04) + sin(xb_05) + sin(xb_06) + sin(xb_07) + sin(xb_08) +
     tan(xn_01) + tan(xn_02) + tan(xn_03) + tan(xn_04) + tan(xn_05) + tan(xn_06) + tan(xn_07) + tan(xn_08) + 
     tanh(xs_01) + tanh(xs_02) + tanh(xs_03) + tanh(xs_04) + tanh(xs_05) + tanh(xs_06) +
     poly(xw_01, 3) + poly(xw_02, 3) + poly(xw_03, 3),
   data = df
+)
+```
+
+### ROC
+
+```{r}
+glm_model8_roc <- train_glm(
+  formula = outcome ~ cos(xa_01) + cos(xa_02) + cos(xa_03) + cos(xa_04) + cos(xa_05) + cos(xa_06) + cos(xa_07) + cos(xa_08) +
+    sin(xb_01) + sin(xb_02) + sin(xb_03) + sin(xb_04) + sin(xb_05) + sin(xb_06) + sin(xb_07) + sin(xb_08) +
+    tan(xn_01) + tan(xn_02) + tan(xn_03) + tan(xn_04) + tan(xn_05) + tan(xn_06) + tan(xn_07) + tan(xn_08) + 
+    tanh(xs_01) + tanh(xs_02) + tanh(xs_03) + tanh(xs_04) + tanh(xs_05) + tanh(xs_06) +
+    poly(xw_01, 3) + poly(xw_02, 3) + poly(xw_03, 3),
+  data = df,
+  objective = "roc"
 )
 ```
 
@@ -192,63 +307,99 @@ glm_model9_formula
 
 Now we model:
 
+### Accuracy
+
 ```{r}
-glm_model9 <- train_glm(
+glm_model9_acc <- train_glm(
   formula = glm_model9_formula,
   data = df_glm_model9
 )
 ```
+
+### ROC
+
+```{r}
+glm_model9_roc <- train_glm(
+  formula = glm_model9_formula,
+  data = df_glm_model9,
+  objective = "ROC"
+)
+```
+
+
+# A note about warnings received:
+
+Models 5, 6, and 9 exhibited warnings during training. Critically, 5 and 6 did not converge, suggesting strange correlational structure between inputs and outputs. As we'll see below, these models did not perform well, which is not surprising.
+
+Model 9 was able to linearly separate inputs with perfect accuracy, suggesting that it may be a good candidate for regularization.
 
 # Comparison
 
 I'll examine a couple of statistics to help me decide which of these seems best. 
 
 ```{r}
-all_glm_models <- list(
-  model1 = glm_model1,
-  model2 = glm_model2,
-  model3 = glm_model3,
-  model4 = glm_model4,
-  model5 = glm_model5,
-  model6 = glm_model6,
-  model7 = glm_model7,
-  model8 = glm_model8,
-  model9 = glm_model9
+all_glm_models_acc <- list(
+  model1 = glm_model1_acc,
+  model2 = glm_model2_acc,
+  model3 = glm_model3_acc,
+  model4 = glm_model4_acc,
+  model5 = glm_model5_acc,
+  model6 = glm_model6_acc,
+  model7 = glm_model7_acc,
+  model8 = glm_model8_acc,
+  model9 = glm_model9_acc
 )
 
-glm_results <- resamples(all_glm_models)
+all_glm_models_roc <- list(
+  model1 = glm_model1_roc,
+  model2 = glm_model2_roc,
+  model3 = glm_model3_roc,
+  model4 = glm_model4_roc,
+  model5 = glm_model5_roc,
+  model6 = glm_model6_roc,
+  model7 = glm_model7_roc,
+  model8 = glm_model8_roc,
+  model9 = glm_model9_roc
+)
+
+glm_results_acc <- resamples(all_glm_models_acc)
+glm_results_roc <- resamples(all_glm_models_roc)
 ```
 
 ## Accuracy
 
 ```{r}
-dotplot(glm_results)
+dotplot(glm_results_acc, metric = "Accuracy")
 ```
+
+Accuracy is very close, at least among the top models. The large variance in accuracy across the 5-fold CV overlaps for several models, making it hard to tell just from this metric what's going on. This said, models 2, 3, and 9 have the highest average accuracy among current trials.
+
+Let's look at ROC/thresholded metrics.
 
 ## ROC, Sensitivty, and Specificity
 
 ```{r}
-dotplot(model_results)
+dotplot(glm_results_roc)
 ```
 
-Models 2, 3, and 9 have the best combination of these stats. Let's how AIC stacks up:
+Models 2, 3, and 9 have the best combination of these stats (though 7 seems to be close). Let's how AIC stacks up:
 
 ## AIC
 
 ```{r}
 tibble::tibble(
-  model = names(all_glm_models),
-  aic = purrr::map_dbl(all_glm_models, function(x) AIC(x$finalModel))
+  model = names(all_glm_models_roc),
+  aic = purrr::map_dbl(all_glm_models_roc, function(x) AIC(x$finalModel))
 ) %>%
   ggplot(mapping = aes(x = model, y = aic)) + 
   geom_col()
 ```
 
-Our leading models all have relatively equivalent AICs, so my guess is that it's dealer's choice between these three. Saving them for later:
+Our leading models all have relatively equivalent AICs, so combined with the other metrics, my guess is that it's dealer's choice between these three. Saving them for later:
 
 ```{r}
-save_model("simple_cls_model2", glm_model2)
-save_model("simple_cls_model3", glm_model3)
-save_model("simple_cls_model9", glm_model9)
+save_model("glm_model2", glm_model2_roc)
+save_model("glm_model3", glm_model3_roc)
+save_model("glm_model9", glm_model9_roc)
 ```
 

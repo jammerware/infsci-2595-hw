@@ -1,6 +1,6 @@
 ---
-title: "INFSCI 2595 Final"
-subtitle: "Part IIIa: Classification models (Discussion)"
+title: "Part IIIa2: Classification models (Discussion)"
+subtitle: "INFSCI 2595 Final"
 author: "Ben Stein"
 date: "4/27/2022"
 output: html_document
@@ -23,6 +23,7 @@ In this document, I review the coefficient summaries from the top 3 classificati
 
 ```{r}
 library(tidyverse)
+library(caret)
 
 source("./tools.R")
 ```
@@ -30,6 +31,67 @@ source("./tools.R")
 ## Loading models trained in the previous doc:
 
 ```{r}
-
+glm_model2 <- load_model("glm_model2.rds")
+glm_model3 <- load_model("glm_model3.rds")
+glm_model9 <- load_model("glm_model9.rds")
 ```
 
+# Examining coefficients
+
+```{r}
+get_glm_varimp <- function(model) {
+  varImp(model)$importance %>%
+    arrange(desc(Overall)) %>%
+    head(15) %>%
+    rownames_to_column() %>%
+    rename(
+      predictor = rowname,
+      importance = Overall
+    )
+}
+
+plot_glm_varimp <- function(model, name) {
+  get_glm_varimp(model) %>%
+    ggplot(
+      mapping = aes(
+        x = importance, 
+        y = factor(
+          predictor, 
+          level = predictor
+        )
+      )
+    ) +
+    geom_col() + 
+    ggtitle(paste("Top 15 variables:", name))
+}
+```
+
+
+## Model 2
+
+```{r}
+plot_glm_varimp(glm_model2, "model 2")
+```
+_(sorry, I really wanted this to be in **descending** order of importance, but that turned out to be way more involved than I thought)_
+
+This model has only the sentiment predictors, but let's keep an eye out for the more important ones in later models. Notably, unlike the regression models, we see a high-ranking word count feature here. The NRC lexicon also seems dominant for this model, having a high number of important features in the top 15.
+
+Last, it's worth noting that both of our top sentiment features from regression also appear here (`xb_07` and `xn_08`).
+
+## Model 3
+
+```{r}
+plot_glm_varimp(glm_model3, "model 3")
+```
+
+This model includes both customer and region, and as we saw in the regression models, those seem to be somewhat useful predictors (even though we're predicting an outcome rather than a continuous value now). As above, the NRC lexicon is useful, and again, we see that word count features show up.
+
+```{r}
+plot_glm_varimp(glm_model9, "model 9")
+```
+
+The trend continues with our final model to be evaluated here - high involvement from NRC lexicon (narrowly beating out AFINN in total important features in this case). We continue to see word count features crack the top 15. Last, our top regression sentiment features also seem useful for classification.
+
+# Summary
+
+The top performing features from each model seem to concur. In general, we see that the NRC lexicon seems especially useful in the classification task, and some common features appear in top performing models from both classification and regression (region, customer, and some sentiment features).
