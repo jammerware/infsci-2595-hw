@@ -37,7 +37,7 @@ That said, on with the show.
       - [Word count features](./iA_x_xw.html)
 - Part II: Regression
   - A. Simple regression (lm) models
-    - [Model fitting](iiA_regression_simple.html)
+    - [Model fitting](iiA_regression_lm.html)
     - [Discussion/evaluation](./iiA_regression_discussion.html)
   - B. [Bayesian regression models](./iiB_regression_bayesian.html)
   - C. [Prediction-based evaluation](./iiC_regression_predictions.html)
@@ -46,7 +46,7 @@ That said, on with the show.
     - [Discussion](./iiD_regression_tuning_discussion.html)
 - Part III: Classification
   - A. Simple classification (glm) models
-    - [Model fitting](./iiiA_classification_simple.html)
+    - [Model fitting](./iiiA_classification_glm.html)
     - [Discussion/evaluation](./iiiA_classification_discussion.html)
   - B. [Bayesian classification models](./iiiB_classification_bayesian.html)
   - C. [Prediction-based evaluation](./iiiC_classification_predictions.html)
