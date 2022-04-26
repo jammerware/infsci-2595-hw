@@ -50,37 +50,6 @@ Based on performance in iiA, variables of interest are `region`, `customer`, and
 
 # Analysis
 
-Let's apply what we know about important variables to these models. Spoiler alert: we need a function that generates confidence and prediction intervals for a given model and visualization grid.
-
-```{r}
-generate_preds <- function(model, viz_grid) {
-  preds <- predict(model, viz_grid, interval = "confidence") %>%
-    as.data.frame %>%
-    as_tibble %>%
-    rename(
-      pred = fit,
-      ci_lwr = lwr,
-      ci_upr = upr
-    ) %>%
-    bind_cols(
-      predict(
-        model,
-        viz_grid,
-        interval = "prediction"
-      ) %>%
-        as.data.frame %>%
-        as_tibble %>%
-        select(
-          pred_lwr = lwr,
-          pred_upr = upr
-        )
-    )
-  
-  viz_grid %>% bind_cols(preds)
-}
-```
-
-
 ## Model 5
 
 Model 5 includes `customer` and both of the sentiment predictors. Let's explore combinations of these three.
@@ -112,16 +81,10 @@ lm_model5_xb_07_vizgrid <- append(
 lm_model5_xb_07_vizgrid
 ```
 
-We also need predictions for our visualization grid:
+We can now generate predictions to see how these variables affect uncertainty:
 
 ```{r}
-df_lm_model5_xb_07 <- generate_preds(lm_model5, lm_model5_xb_07_vizgrid)
-```
-
-We can finally visualize trends!
-
-```{r}
-df_lm_model5_xb_07 %>%
+generate_prediction_trends_regression(lm_model5, lm_model5_xb_07_vizgrid) %>%
     ggplot(mapping = aes(x = xb_07)) + 
     ggtitle("xb_07 with respect to customer") +
     geom_ribbon(mapping = aes(ymin = pred_lwr, ymax = pred_upr), fill = "orange") +
@@ -173,7 +136,7 @@ lm_model6_xb_07_xn_08_vizgrid
 Make predictions and visualize trends:
 
 ```{r}
-generate_preds(lm_model6, lm_model6_xb_07_xn_08_vizgrid) %>%
+generate_prediction_trends_regression(lm_model6, lm_model6_xb_07_xn_08_vizgrid) %>%
     ggplot(mapping = aes(x = xn_08)) + 
     ggtitle("xn_08 with respect to xb_07") +
     geom_ribbon(mapping = aes(ymin = pred_lwr, ymax = pred_upr), fill = "orange") +

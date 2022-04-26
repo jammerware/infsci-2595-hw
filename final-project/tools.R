@@ -13,7 +13,7 @@ load_project_data <- function(
   
   # load and try to suppress overeager messages
   df <- readr::read_csv(
-    "./data/final_project_train.csv", 
+    file.path(getwd(), "data", "final_project_train.csv"),
     col_names = TRUE, 
     col_types = cols()
   )
@@ -47,19 +47,33 @@ load_project_data <- function(
       mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
   }
   
-  # if (preprocess_data) {
-  #   rec_preprocessed <- recipe(
-  #     response ~ .,
-  #     data = df_raw
-  #   ) %>%
-  #     step_normalize(all_numeric_predictors()) %>%
-  #     step_log(all_outcomes())  %>%
-  #     prep()
-  #   
-  #   df_raw <- bake(rec_preprocessed, new_data = df_raw)
-  # }
-  
   return(df)
+}
+
+generate_prediction_trends_regression <- function(model, viz_grid, predictFn = predict, ...) {
+  preds <- predict(model, viz_grid, interval = "confidence") %>%
+    as.data.frame %>%
+    as_tibble %>%
+    rename(
+      pred = fit,
+      ci_lwr = lwr,
+      ci_upr = upr
+    ) %>%
+    bind_cols(
+      predict(
+        model,
+        viz_grid,
+        interval = "prediction"
+      ) %>%
+        as.data.frame %>%
+        as_tibble %>%
+        select(
+          pred_lwr = lwr,
+          pred_upr = upr
+        )
+    )
+  
+  viz_grid %>% bind_cols(preds)
 }
 
 visualize_correlations <- function(data, column_name_start) {
@@ -101,6 +115,20 @@ visualize_bayesian_coefficient_distributions <- function(model) {
     theme(axis.text.y = element_blank())
 }
 
+visualize_varimp <- function(model, varImpfn = varImp) {
+  model %>%
+    varImpfn %>%
+    arrange(desc(Overall)) %>%
+    head(15) %>%
+    rownames_to_column() %>%
+    rename(
+      predictor = rowname,
+      importance = Overall
+    ) %>%
+    ggplot(mapping = aes(x = importance, y = factor(predictor, level = predictor))) +
+    geom_col()
+}
+
 get_significant_bayesian_coefficients <- function(model) {
   model %>%
     posterior_interval %>%
@@ -111,11 +139,9 @@ get_significant_bayesian_coefficients <- function(model) {
     arrange(desc(abs(!!as.symbol("5%"))))
 }
 
-my_supertrain <- function(formula, data, method, info, parallelize = TRUE, ...) {
-  if (parallelize == TRUE) {
-    parallel_cluster <- makeCluster(detectCores() - 1)
-    registerDoParallel(parallel_cluster) 
-  }
+my_supertrain <- function(formula, data, method, info, ...) {
+  parallel_cluster <- makeCluster(detectCores() - 1)
+  registerDoParallel(parallel_cluster)
   
   out <- tryCatch(
     {

@@ -1,0 +1,99 @@
+---
+title: "Part ivB: Interpretation (Difficult customers)"
+subtitle: "INFSCI 2595 Final"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I identify which customers are most difficult to predict in both regression and classification based on all resampling performed during model training.
+
+# Setup
+
+## Libraries & tools
+
+```{r}
+library(tidyverse)
+library(caret)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data(outcome_to_numeric = FALSE)
+```
+
+## "Best" models
+
+```{r}
+best_reg_model <- load_model("adv_reg_model10_svm_rbf.rds")
+best_cls_model <- load_model("adv_class_model4_continuous_linear.rds")
+```
+
+# Tough customers: regression
+
+As I noted in [ivA](./ivA_interpretation_intro.html), my top-performing regression model was an SVM with radial basis function. Let's compute the residuals for each observation (across all resamplings) and group them by customer:
+
+```{r}
+df %>%
+  select(customer) %>%
+  mutate(row_index = 1:nrow(.)) %>%
+  inner_join(best_reg_model$pred, by = c("row_index" = "rowIndex")) %>%
+  select(
+    customer,
+    pred,
+    obs
+  ) %>%
+  group_by(customer) %>%
+  summarise(
+    rmse = caret::RMSE(pred, obs)
+  ) %>%
+  arrange(rmse) %>%
+  ggplot(mapping = aes(x = factor(customer, levels = customer), y = rmse)) +
+  geom_col() +
+  ggtitle("Top regression model: per-customer RMSE") +
+  theme_bw()
+```
+
+Based on the RMSE observed across resamplings, customers K and Q are the most difficult to predict in regression. Maybe they're moody people?
+
+# Tough customers: classification
+
+Here, I look at how _accurately_ the best classification model predicts events for each customer:
+
+```{r}
+df %>%
+  select(customer) %>%
+  mutate(row_index = 1:nrow(.)) %>%
+  inner_join(best_cls_model$pred, by = c("row_index" = "rowIndex")) %>%
+  select(
+    customer,
+    pred,
+    obs,
+    event,
+    non_event
+  ) %>%
+  group_by(customer) %>%
+  summarise(
+    acc = sum(ifelse(obs == pred, 1, 0)) / n()
+    # rmse = caret::RMSE(pred, obs)
+  ) %>%
+  arrange(desc(acc)) %>%
+  ggplot(mapping = aes(x = factor(customer, levels = customer), y = acc)) +
+  geom_col() +
+  ggtitle("Top classification model: per-customer accuracy") + 
+  theme_bw()
+```
+
+Based on this figure, accuracy is closer among customers, but we see that customers `A` and `Other` are the most difficult to classify. `Other` doesn't surprise me, since I assume it's an aggregation of a number of customers whose collective behavior may not have clear patterns. However, based on the base rate of the `event` outcome, no model has great accuracy (though we seem to be able to predict customer `E` successfully).

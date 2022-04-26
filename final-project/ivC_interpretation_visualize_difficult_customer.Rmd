@@ -1,0 +1,162 @@
+---
+title: "Part ivC: Visualizing trends for a difficult customer"
+subtitle: "INFSCI 2595 Final"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I visualize trends for the most difficult-to-predict customer in the **regression** problem: customer K.
+
+# Setup
+
+## Libraries & tools
+
+```{r}
+library(tidyverse)
+library(caret)
+library(vip)
+library(xgboost)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data() %>%
+  select(-outcome_numeric) %>%
+  filter(customer == "K")
+```
+
+## "Best" model
+
+```{r}
+best_reg_model <- load_model("adv_reg_model9_xgb.rds")
+```
+
+## Utility functions
+
+# Visualization
+
+**NOTE:** My best-performing regression model was an SVM for which I was unable to produce variable importance. Instead, I perform the analysis below using my second-best regression model (XGBoost) to ensure that I'm using the most important features from that model.
+
+## Important variables
+
+Recall our most important variables:
+
+```{r}
+vip::vip(best_reg_model$finalModel)
+```
+
+## Trends
+
+### `xw_01` and `region`
+
+These were the two most predictive variables in this model. Let's explore them:
+
+```{r}
+viz_grid_xw_01_region <- append(
+  expand.grid(
+    customer = names(which.max(table(df$customer))),
+    region = df$region,
+    xw_01 = seq(
+      min(df$xw_01),
+      max(df$xw_01),
+      length.out = 101
+    )
+  ),
+  df %>%
+    select(
+      -customer,
+      -region,
+      # Leaving the observed response here - I address why below
+      # -response_log,
+      -xw_01
+    ) %>%
+    colMeans
+) %>% as_tibble
+
+viz_grid_xw_01_region
+```
+
+Visualizing the trends:
+
+**NOTE:** `predict` can't seem to generate prediction and confidence intervals for SVM models. Instead, I visualize the RMSE across values of `xw_01`.
+
+```{r}
+# Demonstrating that predict can't do CI for SVMs:
+predict(best_reg_model, viz_grid_xw_01_region, interval = "confidence") %>% head(10)
+```
+
+```{r}
+viz_grid_xw_01_region %>%
+  rename(obs = response_log) %>%
+  mutate(
+    pred = predict(best_reg_model, viz_grid_xw_01_region),
+    rmse = RMSE(pred, obs)
+  ) %>%
+  ggplot(mapping = aes(x = xw_01, y = rmse)) + 
+    ggtitle("xw_01 with respect to region: RMSE") +
+    geom_line(mapping = aes(y = pred)) +
+    facet_wrap(~ region)
+```
+
+Okay, so the `region` facet doesn't turn out to be all that interesting (which I should have realized in advance, since a customer is likely only in one region), but we can still see how `xw_01` works. There's a very clear trend between the word count feature and RMSE. Let's facet by something more interesting, though:
+
+### `xw_01` and `xa_01`
+
+```{r}
+viz_grid_xw_01_xa_01 <- append(
+  expand.grid(
+    customer = "K",
+    region = "ZZ",
+    xw_01 = seq(
+      min(df$xw_01),
+      max(df$xw_01),
+      length.out = 101
+    ),
+    xa_01 = seq(
+      min(df$xa_01),
+      max(df$xa_01),
+      length.out = 9
+    )
+  ),
+  df %>%
+    select(
+      -customer,
+      -region,
+      # Leaving the observed response here - I address why below
+      # -response_log,
+      -xw_01,
+      -xa_01
+    ) %>%
+    colMeans
+) %>% as_tibble
+
+viz_grid_xw_01_xa_01
+```
+
+```{r}
+viz_grid_xw_01_xa_01 %>%
+  rename(obs = response_log) %>%
+  mutate(
+    pred = predict(best_reg_model, viz_grid_xw_01_xa_01),
+    rmse = RMSE(pred, obs)
+  ) %>%
+  ggplot(mapping = aes(x = xw_01, y = rmse)) + 
+    ggtitle("xw_01 with respect to xa_01: RMSE") +
+    geom_line(mapping = aes(y = pred)) +
+    facet_wrap(~ xa_01, labeller = label_both)
+```
+
+We see a similar trend across all values of `xa_01`, with low values of `xw_01` having low error. We can see that the amount of error also increases as we reach medium and higher values of `xa_01`. This is interesting, though - `xa_01` is a sentiment variable, while `xw_01` is a word-count-related one, but high values of both result in higher error.

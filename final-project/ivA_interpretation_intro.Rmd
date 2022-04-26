@@ -17,16 +17,92 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In this document, I begin interpreting my results. I identify the strongest models for regression and classification, examine and compare their variables, and attempt to answer the question of whether the sentiment-based variables are useful in predicting the outputs.
 
+# Setup
+
+## Libraries & tools
+
+```{r}
+library(tidyverse)
+library(caret)
+library(vip)
+
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df <- load_project_data()
+```
+
+## "Best" models
+
+```{r}
+best_reg_model <- load_model("adv_reg_model10_svm_rbf.rds")
+best_cls_model <- load_model("adv_class_model4_continuous_linear.rds")
+```
+
+
 # Best models
 
 ## Regression
 
-My best performing regression model
+My best performing regression model was an SVM-based model using a radial basis function. Let's take a look at a quick summary:
+
+### Metrics
+
+```{r}
+best_reg_model$results %>%
+  filter(
+    sigma == best_reg_model$bestTune$sigma & C == best_reg_model$bestTune$C
+  )
+```
+
+### Variable importance
+
+**NOTE:** My best model is the SVM; however, I had trouble getting variable importance working:
+
+```{r, error = TRUE}
+vip::vip(best_reg_model$finalModel)
+```
+
+Instead, I'll examine variable importance for my second-best model, which is an XGBoost model:
+
+```{r}
+best_reg_model2 <- load_model("adv_reg_model9_xgb.rds")
+vip::vip(best_reg_model2)
+```
+
+The results are somewhat surprising. In the simple `lm` models, word-count-based features did not contribute significantly, but all three help this model. We also do not see either of the top sentiment predictors from those models (`xb_07` and `xn_08`) or the `customer` categorical, which was productive in some models. However, as before, `region` remains a valuable contributor. 
+
+In this model, no sentiment group seems to dominate, with a couple of variables from each of the AFINN and NRC lexicons (and one from Bing). SentimentR was apparently not useful to this model.
 
 ## Classification
 
-# Variable comparison
+My best classification model was model 4 (a linear combination of all sentiment features):
+
+```{r}
+broom::glance(best_cls_model$finalModel)
+```
+
+### Variable importance
+
+```{r}
+visualize_varimp(best_cls_model$finalModel)
+```
+
+As we saw in earlier sections, the word count variables seem useful in the classification problem. In this particular model, only one makes the cut, but it's the most important variable by a fair bit. Additionally, variables we saw pop up in earlier _regression_ analyses show up here (`xb_07` and `xn_08`). Finally, the NRC lexicon variables seem dominant in the regression problem, with seven of eight total variables appearing in the top 15.
+
+# Variable comparison (and do the sentiment variables help?)
+
+## Notes on the categoricals
+
+Comparisons between these two models are interesting. The winning model from the classification problem does not utilize categoricals at all. Throughout analysis, I noticed the `region` and `customer` predictors showing up less in successful classification model (2 of 3 top glm models did not use these at all, for example). However, recall from [iiiD](./iiiD_classification_tuning_discussion.html) that we more or less flipped (multi-sided) coin, and the other models did involve these predictors in some amount.
+
+## Word count variables
+
+This is another interesting finding. In [iiA](./iiA_regression_discussion.html) and [iiiA](./iiiA_classification_discussion.html), we saw that the word count features seemed to matter more for classification than regression, and we see them in the best-performing classification model above. However, surprisingly, we also see them in the best regression model, despite not looking all that good in earlier parts of the analysis. 
 
 # Are the sentiment variables useful?
 
-Based on findings from iiC and iiiC it seems as though sentiment variables have some utility. Some sentiment variables (e.g. `xb_07`, `xn_08`) seem to be powerful predictors in both regression and classification. In general, based on variable importance, the Bing lexicon seems to be most useful in regression. Additionally, among the sentiment variables examined closely, it seems that extreme sentiment values do not predict outcomes well (i.e. high and low values of the sentiment variables result in greater amounts of uncertainty).
+Based on the sum of all this analysis, it seems as though sentiment variables have some utility. Some sentiment variables (e.g. `xb_07`, `xn_08`) seem to be powerful predictors in both regression and classification, and both show up in the top regression and classification models. We also saw that, among regression models examined, the Bing lexicon variables showed up most. The NRC lexicon seems to be the analogue for classification models. In addition, among the sentiment variables examined closely (in iiC and iiiC), it seems that extreme sentiment values do not predict outcomes well (i.e. high and low values of the sentiment variables result in greater amounts of uncertainty).

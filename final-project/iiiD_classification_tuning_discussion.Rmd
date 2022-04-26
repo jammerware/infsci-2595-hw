@@ -28,11 +28,12 @@ library(caret)
 source("./tools.R")
 ```
 
+# Model performance
 
-## Load models
+## ROC/Sensitivity/specificity
 
 ```{r}
-all_cls_models <- list(
+all_cls_models_roc <- list(
   cls_model1_linear_all_inputs = load_model("adv_class_model1.rds"),
   cls_model2_pairwise_continuous = load_model("adv_class_model2.rds"),
   cls_model3_cubic_sentiment = load_model("adv_class_model3_cubic_sentiment.rds"),
@@ -41,27 +42,53 @@ all_cls_models <- list(
   cls_model6_cubic_sentiment_enet = load_model("adv_class_model6_cubic_sentiment_enet.rds"),
   cls_model7_nnet = load_model("adv_class_model7_nnet.rds"),
   cls_model8_rf = load_model("adv_class_model8_rf.rds"),
-  # cls_model9_xgb = load_model("adv_class_model9_xgb.rds"),
+  cls_model9_xgb = load_model("adv_class_model9_xgb.rds"),
   cls_model10_svm = load_model("adv_class_model10_svm_rbf.rds"),
   cls_model11_knn = load_model("adv_class_model11_knn.rds")
 )
 
-adv_class_model_results <- resamples(all_cls_models)
-```
 
-# Model performance
-
-## ROC/Sensitivity/specificity
-
-```{r}
-dotplot(adv_class_model_results, main = "Tuned classification models: results")
+dotplot(resamples(all_cls_models_roc), main = "Tuned classification models: ROC results")
 ```
 
 It's a pretty tight race. Conducting a "visual average" of the three statistics, it looks to me like models 1, 3, 4, and 7 have the best performance based on these. The low sensitivity of all models concerns me. I suspect it's related to the original dataset being unbalanced with respect to the outcome, but depending on the use case, models with low sensitivity may be less useful. If I were forced to pick a winner (which I will be later), I'm leaning toward model 7 (which is the neural net), as it has the best ROC and has good specificity while leaning a little more toward sensitivity.
 
+## Accuracy
+
+```{r}
+all_cls_models_acc <- list(
+  cls_model1_linear_all_inputs = load_model("adv_class_model1_acc.rds"),
+  cls_model2_pairwise_continuous = load_model("adv_class_model2_acc.rds"),
+  cls_model3_cubic_sentiment = load_model("adv_class_model3_cubic_sentiment_acc.rds"),
+  cls_model4_sentiment = load_model("adv_class_model4_continuous_linear_acc.rds"),
+  cls_model5_pairwise_enet = load_model("adv_class_model5_pairwise_continuous_linear_enet_acc.rds"),
+  cls_model6_cubic_sentiment_enet = load_model("adv_class_model6_cubic_sentiment_enet_acc.rds"),
+  cls_model7_nnet = load_model("adv_class_model7_nnet_acc.rds"),
+  cls_model8_rf = load_model("adv_class_model8_rf_acc.rds"),
+  cls_model9_xgb = load_model("adv_class_model9_xgb_acc.rds"),
+  cls_model10_svm = load_model("adv_class_model10_svm_rbf_acc.rds"),
+  cls_model11_knn = load_model("adv_class_model11_knn_acc.rds")
+)
+
+all_cls_models_acc_results <- resamples(all_cls_models_acc)
+dotplot(all_cls_models_acc_results, main = "Tuned classification models: Accuracy results", metric = "Accuracy")
+```
+
+Across all resamplings, the accuracy for the top, say, 6 models is _very_ close. Not much help.
+
+## Kappa
+
+```{r}
+dotplot(all_cls_models_acc_results, main = "Tuned classification models: Accuracy (only)", metric = "Kappa")
+```
+
+There is more separation here, but this is still a bit concerning. These are relatively low values of kappa as I understand the term. I suspect the strong accuracy juxtaposed against relatively weaker kappa is related to the imbalance of the dataset (because there are significantly more non-events than events.)
+
+However, we have to move on, so I'll say that the winner so far seems to model 4 (though all are close). It has a good balance of ROC, sensitivity, accuracy, and Kappa.
+
 ## AIC
 
-Let's look at the AIC of leading models to help us decide. I can't find a generalized version of AIC that works for neural nets, but we can do the other three, I guess.
+Out of curiosity, let's look at the AIC of leading models to help us decide. I can't find a generalized version of AIC that works for neural nets, but we can do the other three, I guess.
 
 ```{r}
 leading_cls_models <- list(
@@ -73,4 +100,4 @@ leading_cls_models <- list(
 leading_cls_models %>% purrr::map(AIC)
 ```
 
-These are all quite close to one another, though I'm not sure if there good in an absolute sense, and I don't know how to compare them to the neural net. 
+These are all quite close to one another, though I'm not sure if there good in an absolute sense, and I don't know how to compare them to the neural net. Model 4's higher AIC may suggest that we should be picking model 1. I'm not sure. I'm choosing **model 4** because I think it'll provide more interesting analysis based on its formulation (model 1 is just all predictors in linear combination).
