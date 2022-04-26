@@ -1,0 +1,65 @@
+---
+title: "Part v: Supplement (Compiling best model predictions)"
+subtitle: "INFSCI 2595 Final"
+author: "Ben Stein"
+date: "4/27/2022"
+output: html_document
+knit: (function(inputFile, encoding) {
+    rmarkdown::render(inputFile, encoding = encoding, output_dir = "knit") }
+  )
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+In this document, I compile predictions from my best classification and regression models for evaluation by the provided Shiny app. Note that I used the ROC-tuned version of the classification model.
+
+# Setup
+
+## Libraries & tools
+
+```{r}
+library(tidyverse)
+library(caret)
+source("./tools.R")
+```
+
+## Data
+
+```{r}
+df_holdout <- readr::read_csv('./data/final_project_holdout_inputs.csv', col_names = TRUE) %>% 
+  select(-rowid)
+```
+
+## "Best" models
+
+```{r}
+best_reg_model <- load_model("adv_reg_model10_svm_rbf.rds")
+best_cls_model <- load_model("adv_class_model4_continuous_linear.rds")
+```
+
+# Stitching it all together
+
+```{r}
+reg_preds <- predict(best_reg_model, newdata = df_holdout)
+cls_preds <- predict(best_cls_model, newdata = df_holdout)
+
+my_preds <- tibble::tibble(
+  y = predict(best_reg_model, newdata = df_holdout),
+  outcome = predict(best_cls_model, newdata = df_holdout)
+) %>% 
+  bind_cols(
+    predict(best_cls_model, newdata = df_holdout, type = 'prob') %>% 
+      select(probability = event)
+  ) %>% 
+  tibble::rowid_to_column('id')
+```
+
+```{r}
+my_preds %>% readr::write_csv("./data/final_preds.csv", col_names = TRUE)
+```
+
+
