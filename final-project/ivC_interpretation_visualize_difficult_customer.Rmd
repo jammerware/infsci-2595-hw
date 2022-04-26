@@ -44,8 +44,6 @@ df <- load_project_data() %>%
 best_reg_model <- load_model("adv_reg_model9_xgb.rds")
 ```
 
-## Utility functions
-
 # Visualization
 
 **NOTE:** My best-performing regression model was an SVM for which I was unable to produce variable importance. Instead, I perform the analysis below using my second-best regression model (XGBoost) to ensure that I'm using the most important features from that model.

@@ -92,9 +92,9 @@ Out of curiosity, let's look at the AIC of leading models to help us decide. I c
 
 ```{r}
 leading_cls_models <- list(
-  cls_model1 = all_cls_models$cls_model1_linear_all_inputs$finalModel,
-  cls_model3 = all_cls_models$cls_model3_cubic_sentiment$finalModel,
-  cls_model4 = all_cls_models$cls_model4_sentiment$finalModel
+  cls_model1 = all_cls_models_roc$cls_model1_linear_all_inputs$finalModel,
+  cls_model3 = all_cls_models_roc$cls_model3_cubic_sentiment$finalModel,
+  cls_model4 = all_cls_models_roc$cls_model4_sentiment$finalModel
 )
 
 leading_cls_models %>% purrr::map(AIC)

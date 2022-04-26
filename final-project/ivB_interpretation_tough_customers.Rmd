@@ -24,6 +24,7 @@ In this document, I identify which customers are most difficult to predict in bo
 ```{r}
 library(tidyverse)
 library(caret)
+library(yardstick)
 
 source("./tools.R")
 ```
@@ -43,7 +44,7 @@ best_cls_model <- load_model("adv_class_model4_continuous_linear.rds")
 
 # Tough customers: regression
 
-As I noted in [ivA](./ivA_interpretation_intro.html), my top-performing regression model was an SVM with radial basis function. Let's compute the residuals for each observation (across all resamplings) and group them by customer:
+As I noted in [ivA](./ivA_interpretation_intro.html), my top-performing regression model was an SVM with a radial basis function. Let's compute the residuals for each observation (across all resamplings) and group them by customer:
 
 ```{r}
 df %>%
@@ -87,7 +88,6 @@ df %>%
   group_by(customer) %>%
   summarise(
     acc = sum(ifelse(obs == pred, 1, 0)) / n()
-    # rmse = caret::RMSE(pred, obs)
   ) %>%
   arrange(desc(acc)) %>%
   ggplot(mapping = aes(x = factor(customer, levels = customer), y = acc)) +
@@ -97,3 +97,63 @@ df %>%
 ```
 
 Based on this figure, accuracy is closer among customers, but we see that customers `A` and `Other` are the most difficult to classify. `Other` doesn't surprise me, since I assume it's an aggregation of a number of customers whose collective behavior may not have clear patterns. However, based on the base rate of the `event` outcome, no model has great accuracy (though we seem to be able to predict customer `E` successfully).
+
+## How are we misclassifying problematic customers?
+
+We know that accuracy is low for customers `Other` and `A`, but I was curious exactly how we were misclassifying them. I used a confusion matrix to check.
+
+### Customer `Other`
+
+```{r}
+df_customerOther_preds <- df %>%
+  select(customer) %>%
+  mutate(row_index = 1:nrow(.)) %>%
+  inner_join(best_cls_model$pred, by = c("row_index" = "rowIndex")) %>%
+  select(
+    customer,
+    pred,
+    obs,
+    event,
+    non_event
+  ) %>%
+  filter(customer == "Other") %>%
+  select(
+    pred,
+    obs
+  )
+
+autoplot(
+  yardstick::conf_mat(df_customerOther_preds, truth = obs, estimate = pred), 
+  type = "heatmap"
+) + ggtitle("Customer 'other': confusion matrix")
+```
+
+For this customer (which I assume is actually a group of customers), we misclassified primarily with false negatives (at a rate of nearly 3 times more false negatives than false positives). Given that the event of interest is a product _not_ meeting its sales goal, this may mean that our model is a little overoptimistic, at least in the case of this customer.
+
+### Customer `A`
+
+```{r}
+df_customerA_preds <- df %>%
+  select(customer) %>%
+  mutate(row_index = 1:nrow(.)) %>%
+  inner_join(best_cls_model$pred, by = c("row_index" = "rowIndex")) %>%
+  select(
+    customer,
+    pred,
+    obs,
+    event,
+    non_event
+  ) %>%
+  filter(customer == "A") %>%
+  select(
+    pred,
+    obs
+  )
+
+autoplot(
+  yardstick::conf_mat(df_customerA_preds, truth = obs, estimate = pred), 
+  type = "heatmap"
+) + ggtitle("Customer 'A': confusion matrix")
+```
+
+We see a similar ratio with this customer, lending credence to the idea that our model may be predicting fewer events than it should.
